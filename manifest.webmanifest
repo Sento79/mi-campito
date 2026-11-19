@@ -1,0 +1,16 @@
+{
+  "name": "Mi Campito",
+  "short_name": "Mi Campito",
+  "description": "Lleva tus fincas de cítricos: riego, abonado, plagas, cosecha y cuentas.",
+  "lang": "es",
+  "start_url": "./#/hoy",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f3ea",
+  "theme_color": "#e07b16",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
