@@ -91,7 +91,7 @@ export async function cache(k, horas, cargar) {
 }
 
 // Fotos (Blob)
-export const guardarFoto = (id, blob) => tx('fotos', 'readwrite', s => req(s.put({ id, blob, mod: ahora() })));
+export const guardarFoto = (id, blob, mod = ahora()) => tx('fotos', 'readwrite', s => req(s.put({ id, blob, mod })));
 export const leerFoto = async id => { const r = await tx('fotos', 'readonly', s => req(s.get(id))); return r && r.blob; };
 export const todasFotos = () => tx('fotos', 'readonly', s => req(s.getAll()));
 

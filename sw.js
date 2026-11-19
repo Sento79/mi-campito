@@ -1,7 +1,7 @@
 // Funciona sin conexión: la app se guarda en el dispositivo; mapas y clima se guardan al verlos.
-const V = 'micampito-v1';
+const V = 'micampito-v2';
 const APP = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'data/catalogo.json',
-  'js/app.js', 'js/db.js', 'js/estado.js', 'js/calc.js', 'js/ui.js', 'js/sigpac.js', 'js/fincas.js', 'js/registros.js', 'js/informes.js', 'js/catalogo.js', 'js/ajustes.js',
+  'js/app.js', 'js/db.js', 'js/estado.js', 'js/calc.js', 'js/ui.js', 'js/sigpac.js', 'js/fincas.js', 'js/registros.js', 'js/informes.js', 'js/catalogo.js', 'js/ajustes.js', 'js/sync.js',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/images/marker-icon.png', 'vendor/leaflet/images/marker-icon-2x.png', 'vendor/leaflet/images/marker-shadow.png', 'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
 const TESELAS = 'micampito-teselas';

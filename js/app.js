@@ -7,7 +7,8 @@ import { pantallaFincas, pantallaFinca, pantallaEditarFinca, pantallaEditarSecto
 import { pantallaAnotar, pantallaRegistro, pantallaHistorial } from './registros.js';
 import { pantallaHoy, pantallaCalendario, pantallaRiego, pantallaAbonado, pantallaCuaderno, pantallaCosecha, pantallaCuentas, pantallaAvisos } from './informes.js';
 import { pantallaVariedades, pantallaVariedad, pantallaPlagas, pantallaPatrones } from './catalogo.js';
-import { pantallaAjustes, pantallaAyuda, aplicarTema } from './ajustes.js';
+import { pantallaAjustes, pantallaAyuda, aplicarTema, refrescarSync } from './ajustes.js';
+import { iniciarSync, alSincronizar, estado as sync, sesion } from './sync.js';
 
 const main = $('main');
 
@@ -55,6 +56,17 @@ function ruta() {
   return { nombre: nombre || 'hoy', id: id && decodeURIComponent(id), q: Object.fromEntries(new URLSearchParams(qs || '')) };
 }
 
+// Pantallas con formularios: no se repintan solas al llegar datos de otro dispositivo
+const EDITANDO = ['registro', 'finca-editar', 'sector-editar', 'ajustes', 'anotar'];
+// Icono de la nube en la cabecera
+function nube() {
+  const a = $('#nube'); if (!a) return;
+  a.hidden = !sesion();
+  a.textContent = sync.ocupado ? '🔄' : sync.error ? '⚠️' : '☁️';
+  a.title = sync.ocupado ? 'Sincronizando…' : sync.error || 'Sincronizado';
+  a.setAttribute('aria-label', a.title);
+}
+
 let pintando = false;
 async function pintar() {
   const r = ruta(), f = RUTAS[r.nombre] || RUTAS.hoy;
@@ -80,6 +92,13 @@ async function arrancar() {
   window.addEventListener('hashchange', () => { window.scrollTo(0, 0); pintar(); });
   // Si cambian los datos en otra pestaña o tras importar, recargar la memoria
   alCambiar(async () => { await recargar(); });
+  await iniciarSync();
+  alSincronizar(n => {
+    nube();
+    refrescarSync();
+    if (n) { aplicarTema(); if (!EDITANDO.includes(ruta().nombre)) pintar(); }
+  });
+  nube();
   await pintar();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => { });
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => { });

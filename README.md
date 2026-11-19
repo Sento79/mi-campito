@@ -6,6 +6,7 @@ Cada agricultor da de alta sus fincas y la app le indica qué toca hacer en cada
 
 - Funciona en el navegador y se instala en el móvil. Sirve también sin cobertura.
 - Los datos se quedan en el dispositivo de cada usuario. La copia de seguridad se guarda en un archivo.
+- Opcional: cuenta gratuita para sincronizar varios dispositivos (Supabase, servidores en la UE).
 - Usa servicios públicos: SIGPAC (FEGA), ortofoto PNOA (IGN) y clima de Open-Meteo.
 
 **Úsala:** https://sento79.github.io/mi-campito/ (se instala desde el navegador: «Añadir a pantalla de inicio»).

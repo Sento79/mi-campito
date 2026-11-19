@@ -37,3 +37,12 @@ drop policy if exists "fotos: lo mío" on storage.objects;
 create policy "fotos: lo mío" on storage.objects for all
   using (bucket_id = 'fotos' and (storage.foldername(name))[1] = auth.uid()::text)
   with check (bucket_id = 'fotos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Borrar mi cuenta (RGPD): cada usuario solo puede borrarse a sí mismo; sus datos se van con él (on delete cascade).
+-- Las fotos las borra la app antes, desde Storage.
+create or replace function public.borrar_mi_cuenta() returns void
+language sql security definer set search_path = '' as $$
+  delete from auth.users where id = auth.uid();
+$$;
+revoke all on function public.borrar_mi_cuenta() from public, anon;
+grant execute on function public.borrar_mi_cuenta() to authenticated;

@@ -174,7 +174,7 @@ Riego FAO-56 y balance de agua, abonado con tabla de fertilizantes, cuaderno de 
 | 2 · Catálogo | 55 variedades, 11 patrones y 20 plagas con meses de vigilancia ✅ (datos orientativos; falta contrastar ficha a ficha) |
 | 3 · Asistente | Alta con SIGPAC, foto PNOA y clima Open-Meteo, y cálculos automáticos ✅ |
 | 4 · Avisos | Avisos oficiales GVA ✅ (se actualizan solos con GitHub Actions a las 6:17 y 14:17 UTC). Otras regiones: pendiente |
-| 5 · Extras | Cuaderno imprimible y CSV ✅. Pendiente: sincronización (Supabase), NDVI, valenciano |
+| 5 · Extras | Cuaderno imprimible y CSV ✅. Sincronización opcional con Supabase ✅ (`js/sync.js`, esquema en `docs/supabase.sql`). Pendiente: NDVI, valenciano |
 
 ## 12. Estado (19/11/2026)
 

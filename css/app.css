@@ -116,3 +116,4 @@ dialog .cuerpo{padding:14px 16px;max-height:75vh;overflow:auto}
   .tabla th,.tabla td{border-bottom:1px solid #999;padding:3px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+[hidden]{display:none!important}

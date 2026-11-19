@@ -2,7 +2,8 @@
 import { todos, fusionar, guardarFoto, todasFotos, ponerAjuste, borrarTodo, TABLAS } from './db.js';
 import { D, recargar } from './estado.js';
 import { CAT } from './calc.js';
-import { esc, campos, leerForm, toast, confirmar, descargar, fecha, $ } from './ui.js';
+import { esc, campos, leerForm, toast, confirmar, dialogo, descargar, fecha, $ } from './ui.js';
+import * as S from './sync.js';
 
 const b64 = blob => new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(blob); });
 async function comprimir(txt) {
@@ -39,8 +40,10 @@ export async function importar(file) {
 export function pantallaAjustes(main) {
   const A = D.ajustes, F = CAT.fertilizantes;
   const op = k => F.filter(f => f[k]).map(f => [f.id, f.nombre]);
+  const ses = S.sesion(), pend = S.mensajePendiente();
   main.innerHTML = `<h1>Ajustes</h1>
-  <div class="card"><h2>💾 Copia de seguridad</h2><p>Tus datos solo están en este dispositivo. Descarga una copia de vez en cuando y guárdala en otro sitio (correo, nube, USB). Con ella puedes pasar todo a otro móvil u ordenador.</p>
+  <div class="card" id="sb"></div>
+  <div class="card"><h2>💾 Copia de seguridad</h2><p>${ses ? 'Tus datos están en este dispositivo y en tu cuenta.' : 'Tus datos solo están en este dispositivo.'} Descarga una copia de vez en cuando y guárdala en otro sitio (correo, nube, USB). Con ella puedes pasar todo a otro móvil u ordenador.</p>
    <p class="mu">${A.ultimaCopia ? 'Última copia: ' + fecha(A.ultimaCopia) : 'Todavía no has hecho ninguna copia.'}</p>
    <div class="acciones"><button class="pri" id="exp">⬇️ Descargar copia</button><label class="btn" style="flex-direction:row;color:var(--tx)">⬆️ Cargar copia<input type="file" id="imp" accept=".micampito,application/json,application/gzip" hidden></label></div>
    <p class="mu">Al cargar una copia se juntan los datos: no se pierde nada de lo que ya tienes.</p></div>
@@ -51,7 +54,7 @@ export function pantallaAjustes(main) {
    <h2 style="margin-top:16px">🎨 Aspecto</h2>
    ${campos([['tema', 'Tema', 'select', { o: [['auto', 'Como el dispositivo'], ['light', 'Claro'], ['dark', 'Oscuro']] }]], A)}
    <div class="acciones"><button class="pri">Guardar ajustes</button></div></form>
-  <div class="card"><h2>🔒 Privacidad</h2><p>Mi Campito no tiene servidor ni cuentas: nada sale de tu dispositivo. Para funcionar, consulta servicios públicos con la ubicación de tus parcelas: <b>SIGPAC</b> (FEGA) para los lindes, el <b>IGN</b> para la foto aérea y <b>Open-Meteo</b> para el tiempo. No se les envía ningún dato tuyo más.</p></div>
+  <div class="card"><h2>🔒 Privacidad</h2><p>Si no creas una cuenta, nada sale de tu dispositivo. Si la creas, tu correo y tus datos se guardan cifrados en tránsito en <b>Supabase</b>, en servidores de la Unión Europea (Fráncfort), y solo tú puedes leerlos. No se usan para nada más ni se ceden a nadie. Puedes borrar la cuenta y todo lo subido cuando quieras desde aquí.</p><p>Para funcionar, consulta servicios públicos con la ubicación de tus parcelas: <b>SIGPAC</b> (FEGA) para los lindes, el <b>IGN</b> para la foto aérea y <b>Open-Meteo</b> para el tiempo. No se les envía ningún dato tuyo más.</p></div>
   <div class="card"><h2>⚠️ Borrar todo</h2><p class="mu">Elimina todas las fincas y anotaciones de este dispositivo. Haz antes una copia.</p><button class="pel" id="bor">Borrar todos los datos</button></div>
   <p class="pie">Mi Campito · código abierto en <a href="https://github.com/Sento79/mi-campito" target="_blank" rel="noopener">GitHub</a> · catálogo ${esc(CAT.version)}</p>`;
   $('#exp', main).onclick = exportar;
@@ -60,10 +63,70 @@ export function pantallaAjustes(main) {
     e.preventDefault();
     const o = leerForm(e.target);
     for (const [k, v] of Object.entries(o)) { await ponerAjuste(k, v); D.ajustes[k] = v; }
+    await S.ajustesCambiados();
     aplicarTema(); toast('Ajustes guardados');
   };
   $('#bor', main).onclick = async () => { if (await confirmar('Se borrarán todas tus fincas, sectores y anotaciones de este dispositivo. No se puede deshacer.', 'Borrar todo')) { await borrarTodo(); await recargar(); toast('Datos borrados'); location.hash = '#/hoy'; } };
+  pintarSync();
+  if (pend?.error) dialogo('No se ha podido completar', `<p>${esc(pend.error)}</p><div class="acciones"><button class="pri" data-cerrar>Vale</button></div>`);
+  else if (pend?.tipo === 'recovery') nuevaClave();
+  else if (pend?.tipo) toast('Correo confirmado: ya estás dentro de tu cuenta');
 }
+
+// ---- Tarjeta de sincronización ----
+const cuando = iso => iso ? new Date(iso).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'nunca';
+export function refrescarSync() { const c = $('#sb'); if (c && !c.querySelector('form')) pintarSync(); }
+function pintarSync() {
+  const c = $('#sb'); if (!c) return;
+  const ses = S.sesion(), e = S.estado;
+  if (!ses) {
+    c.innerHTML = `<h2>☁️ Usar en varios dispositivos</h2>
+    <p>Opcional y gratis. Con una cuenta, tus fincas y anotaciones se guardan también en un servidor de la Unión Europea y se juntan solas en tu móvil, tu tableta y tu ordenador. Solo tú puedes verlas.</p>
+    <form id="sbf" autocomplete="on">${campos([['email', 'Correo electrónico', 'email', { req: true }], ['clave', 'Contraseña (8 caracteres o más)', 'password', { req: true }]])}
+    <div class="acciones"><button class="pri" name="entrar">Entrar</button><button name="crear">Crear cuenta</button><button type="button" class="min" id="sbo">He olvidado la contraseña</button></div></form>
+    <p class="mu">Lo que ya tengas en este dispositivo se sube a tu cuenta al entrar; no se pierde nada.</p>`;
+    const f = $('#sbf', c);
+    f.elements.email.autocomplete = 'email'; f.elements.clave.autocomplete = 'current-password'; f.elements.clave.minLength = 8;
+    f.onsubmit = async ev => {
+      ev.preventDefault();
+      const { email, clave } = leerForm(f), crear = ev.submitter?.name === 'crear', bs = [...f.querySelectorAll('button')];
+      bs.forEach(b => b.disabled = true);
+      try {
+        if (crear) {
+          if (await S.crearCuenta(email, clave)) toast('Cuenta creada');
+          else return dialogo('Mira tu correo', `<p>Te hemos enviado un correo a <b>${esc(email)}</b> (de Supabase). Pulsa el enlace que trae para confirmar la cuenta y volverás aquí ya dentro.</p><p class="mu">Si no llega en unos minutos, mira en la carpeta de spam.</p><div class="acciones"><button class="pri" data-cerrar>Vale</button></div>`);
+        } else { await S.entrar(email, clave); toast(S.estado.error || 'Dentro: datos sincronizados'); }
+      } catch (er) { toast(er instanceof TypeError ? 'Sin conexión con el servidor' : er.message); }
+      finally { bs.forEach(b => b.disabled = false); }
+      pintarSync();
+    };
+    $('#sbo', c).onclick = async () => {
+      const email = f.elements.email.value.trim();
+      if (!email) return toast('Escribe primero tu correo');
+      try { await S.recordarClave(email); dialogo('Mira tu correo', `<p>Si hay una cuenta con <b>${esc(email)}</b>, te llegará un enlace para poner una contraseña nueva.</p><div class="acciones"><button class="pri" data-cerrar>Vale</button></div>`); }
+      catch (er) { toast(er.message); }
+    };
+    return;
+  }
+  c.innerHTML = `<h2>☁️ Varios dispositivos</h2><p>Dentro como <b>${esc(ses.email || '')}</b>. Lo que anotes se sincroniza solo cuando hay conexión.</p>
+   <p class="mu">${e.ocupado ? '🔄 Sincronizando…' : e.error ? '⚠️ ' + esc(e.error) : 'Última sincronización: ' + cuando(e.ultima)}</p>
+   <div class="acciones"><button class="pri" id="sbs"${e.ocupado ? ' disabled' : ''}>🔄 Sincronizar ahora</button><button id="sbx">Salir de la cuenta</button></div>
+   <details><summary>Más opciones</summary><div class="acciones"><button id="sbc">Cambiar la contraseña</button><button class="pel" id="sbb">Borrar mi cuenta</button></div></details>`;
+  $('#sbs', c).onclick = () => S.sincronizar(true).then(n => toast(n ? `Sincronizado: ${n} cambios recibidos` : 'Todo al día')).catch(er => toast(er.message));
+  $('#sbx', c).onclick = async () => { if (await confirmar('Dejarás de sincronizar este dispositivo. Tus datos se quedan aquí y en tu cuenta.', 'Salir')) { await S.salir(); toast('Has salido de la cuenta'); } };
+  $('#sbc', c).onclick = nuevaClave;
+  $('#sbb', c).onclick = async () => {
+    if (!await confirmar('Se borrarán del servidor tu cuenta, tus datos y tus fotos. En este dispositivo se queda todo. No se puede deshacer.', 'Borrar mi cuenta')) return;
+    try { await S.borrarCuenta(); toast('Cuenta borrada del servidor'); } catch (er) { toast(er.message); }
+  };
+}
+function nuevaClave() {
+  dialogo('Contraseña nueva', `<form id="nc">${campos([['clave', 'Contraseña nueva (8 caracteres o más)', 'password', { req: true }]])}<div class="acciones"><button class="pri">Guardar</button></div></form>`, d => {
+    const f = $('#nc', d); f.elements.clave.minLength = 8; f.elements.clave.autocomplete = 'new-password';
+    f.onsubmit = async ev => { ev.preventDefault(); try { await S.cambiarClave(f.elements.clave.value); toast('Contraseña cambiada'); d.close(); } catch (er) { toast(er.message); } };
+  });
+}
+
 export function aplicarTema() {
   const t = D.ajustes.tema;
   if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
