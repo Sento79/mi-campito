@@ -20,14 +20,14 @@ Decisiones tomadas:
 | App | Web instalable (PWA): se abre en el navegador y se añade a la pantalla de inicio. Funciona sin cobertura. |
 | Datos | En el propio móvil u ordenador (IndexedDB). Cada usuario solo ve lo suyo. |
 | Copia de seguridad | Exportar e importar un archivo `.micampito` (JSON comprimido), con fotos incluidas. |
-| Sincronización (B) | Opcional y posterior. Cada registro lleva `id`, fecha de cambio y borrado lógico desde el principio, para poder sincronizar sin rehacer nada. Servidor por decidir (PocketBase propio o Supabase en la UE). |
+| Sincronización (B) | Opcional y posterior (fase 5). Cada registro lleva `id`, fecha de cambio y borrado lógico desde el principio, para poder sincronizar sin rehacer nada. **Decidido: Supabase, región UE (Fráncfort).** Ofrece inicio de sesión, base de datos con permisos por usuario y almacenamiento de fotos, y no obliga a abrir puertos en casa. Plan gratuito al empezar; si crece, se pasa al de pago o se migra a PocketBase en un servidor alquilado. |
 | Catálogos | Ficheros de datos aparte: `variedades.json`, `patrones.json`, `plagas.json`, `regiones.json`. Una variedad nueva = una ficha nueva, sin programar. |
-| Alojamiento | Para que otros la usen hace falta una dirección pública con HTTPS (GitHub Pages o Cloudflare Pages, gratis). El servidor de casa por Tailscale solo sirve para pruebas. **Pendiente de decidir.** |
+| Alojamiento | Para que otros la usen hace falta una dirección pública con HTTPS. **Decidido: GitHub Pages** (gratis, con historial público del código y publicación automática en cada cambio). El servidor de casa solo sirve para pruebas. |
 | Código | HTML, CSS y JavaScript sin dependencias pesadas, igual que Control Finca, pero en varios archivos (núcleo, pantallas y cálculos). |
 
 ## 3. Servicios externos (comprobados el 19/11/2026)
 
-Prueba desde fuera de la finca del usuario (punto de Nules, Castellón), simulando un navegador de otra web.
+Prueba con un punto cualquiera de la Comunitat Valenciana, simulando un navegador de otra web.
 
 | Servicio | Para qué | ¿Funciona desde el navegador? |
 |---|---|---|
@@ -155,14 +155,14 @@ Meses de recolección **orientativos para la Comunitat Valenciana**; se verifica
 
 Riego FAO-56 y balance de agua, abonado con tabla de fertilizantes, cuaderno de campo, cosecha y gastos, alertas de «Hoy», mapa con foto aérea, dictado por voz, modo oscuro y estilo visual.
 
-**No se reutiliza:** nada de lo propio de La Maimona (linde, tiras, fotos históricas recortadas, tabla de ETo de Llíria).
+**No se reutiliza:** nada de lo propio de la finca original (linde, tiras, fotos históricas recortadas, tabla fija de ETo).
 
 ## 10. Riesgos y temas abiertos
 
 - **Datos agronómicos:** son la parte más delicada. Hay que contrastar cada ficha con fuentes oficiales y marcar lo dudoso. Es el grueso de la fase 2.
 - **Responsabilidad:** las recomendaciones son orientativas. La app debe decirlo, y el cuaderno de campo oficial lo firma el titular.
 - **Productos fitosanitarios:** el registro oficial del MAPA cambia a menudo. Al principio se escribirán a mano; después se estudiará conectarlo.
-- **Alojamiento y sincronización:** decidir antes de que la usen otras personas.
+- **Alojamiento y sincronización:** decididos (GitHub Pages y Supabase UE). Antes de activar la sincronización hará falta una política de privacidad, por el RGPD.
 - **Privacidad:** los datos de cada agricultor no salen de su dispositivo, salvo que active la sincronización.
 
 ## 11. Fases
