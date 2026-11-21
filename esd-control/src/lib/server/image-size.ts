@@ -1,0 +1,26 @@
+/** Lee ancho y alto reales de un PNG o JPEG (no se confía en el cliente). */
+export function imageSize(buf: Buffer): { width: number; height: number } | null {
+  if (buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47 && buf.subarray(12, 16).toString("latin1") === "IHDR") {
+    return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  }
+  if (buf.length > 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < buf.length) {
+      if (buf[i] !== 0xff) {
+        i++;
+        continue;
+      }
+      // Saltar bytes de relleno 0xFF antes del marcador
+      while (i + 1 < buf.length && buf[i + 1] === 0xff) i++;
+      if (i + 9 >= buf.length) break;
+      const marker = buf[i + 1];
+      const len = buf.readUInt16BE(i + 2);
+      // SOF0..SOF15 salvo DHT(C4), JPG(C8), DAC(CC)
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) {
+        return { height: buf.readUInt16BE(i + 5), width: buf.readUInt16BE(i + 7) };
+      }
+      i += 2 + len;
+    }
+  }
+  return null;
+}
