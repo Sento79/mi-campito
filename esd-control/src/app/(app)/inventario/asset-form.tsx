@@ -80,7 +80,7 @@ export function AssetForm({
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <Card className="p-5">
         <h2 className="mb-4 text-sm font-semibold">Identificación</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="ID legible" htmlFor="code" required error={e.code?.message} hint="Único. Letras, números, _ . - /">
             <Input id="code" autoFocus={mode === "create"} className="font-mono uppercase" aria-invalid={!!e.code} {...register("code", { required: "Obligatorio", setValueAs: (v: string) => v.trim().toUpperCase() })} />
           </Field>
@@ -112,7 +112,7 @@ export function AssetForm({
       </Card>
       <Card className="p-5">
         <h2 className="mb-4 text-sm font-semibold">Datos técnicos y estado</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Fabricante" htmlFor="manufacturer"><Input id="manufacturer" {...register("manufacturer")} /></Field>
           <Field label="Modelo" htmlFor="model"><Input id="model" {...register("model")} /></Field>
           <Field label="Número de serie" htmlFor="serialNumber"><Input id="serialNumber" {...register("serialNumber")} /></Field>
@@ -134,7 +134,7 @@ export function AssetForm({
       <Card className="p-5">
         <h2 className="mb-1 text-sm font-semibold">Inspección (excepciones por activo)</h2>
         <p className="mb-4 text-xs text-muted">Deje vacío para heredar la periodicidad, el criterio y la plantilla de la categoría.</p>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Field label="Periodicidad: unidad" htmlFor="periodUnit">
             <Select id="periodUnit" {...register("periodUnit")}>
               <option value="">De la categoría</option>

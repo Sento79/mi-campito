@@ -137,3 +137,11 @@ dialog::backdrop {
   .no-print { display: none !important; }
   body { background: white; }
 }
+
+/* Un <fieldset> tiene por defecto min-width: min-content: un texto largo (p. ej. el nombre de una
+   campaña en un <select>) lo ensancharía más que la pantalla del móvil. */
+@layer base {
+  fieldset {
+    min-width: 0;
+  }
+}

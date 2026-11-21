@@ -58,7 +58,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         <Kpi label="NC abiertas" value={sum.openNcs} tone={sum.openNcs ? "bad" : "neutral"} />
       </div>
       <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progreso de la campaña"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} /></div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card className="min-w-0">
           <CardHeader title={`Elementos (${d.items.length})`} description="Los pendientes aparecen primero; al cerrar quedan registrados como no realizados" />
           <Table>

@@ -65,7 +65,7 @@ export function LocationModal({ loc, locations, onClose }: { loc: Partial<Loc>; 
       if (r && !r.ok) setErrs(r.fieldErrors ?? {});
       if (r?.ok) { onClose(); router.refresh(); }
     }}>Guardar</Button></>}>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Depende de" htmlFor="l-parent">
           <Select id="l-parent" value={v.parentId} onChange={(e) => setV({ ...v, parentId: e.target.value })}>
             <option value="">(Raíz)</option>

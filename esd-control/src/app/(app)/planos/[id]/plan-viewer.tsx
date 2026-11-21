@@ -286,7 +286,7 @@ export function PlanViewer({
   const m = vp ? imageMatrix(size, vp) : null;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-3">
         {lockedBy ? (
           <div className="flex items-center gap-2 rounded-lg border border-info/30 bg-info-soft px-3 py-2 text-sm text-info"><Lock className="size-4" aria-hidden />Campaña {lockedBy} en curso: los cambios de disposición requieren confirmación con motivo.</div>
@@ -522,7 +522,7 @@ function PointForm({ planId, page, target, point, nextCode, categories, criteria
   return (
     <Modal open onClose={onClose} title={point ? `Editar punto ${point.code}` : "Nuevo punto"} description={point ? undefined : `Posición normalizada x ${target.x?.toFixed(4)} · y ${target.y?.toFixed(4)} (página ${page})`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button loading={create.pending || update.pending} onClick={save}>Guardar</Button></>}>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Código" htmlFor="pt-code" required error={errs.code}><Input id="pt-code" className="font-mono" value={v.code} onChange={(e) => setV({ ...v, code: e.target.value })} autoFocus /></Field>
         <Field label="Nombre" htmlFor="pt-name" required error={errs.name}><Input id="pt-name" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
         <Field label="Tipo de punto" htmlFor="pt-type">

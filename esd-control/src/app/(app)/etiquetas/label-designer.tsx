@@ -59,7 +59,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
   const showQr = l.code === "qr" || l.code === "both";
   const showBar = l.code === "barcode" || l.code === "both";
   return (
-    <div className="grid gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[400px_minmax(0,1fr)]">
       <div className="space-y-4">
         <Card>
           <CardHeader title="Plantilla" />

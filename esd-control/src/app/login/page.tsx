@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const safeNext = safeRedirect(next);
   if (s) redirect(safeNext);
   return (
-    <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+    <main className="grid grid-cols-1 min-h-screen lg:grid-cols-[1.1fr_1fr]">
       <section className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-text lg:flex">
         <div className="flex items-center gap-3 text-white">
           <span className="grid size-10 place-items-center rounded-lg bg-[#3aa5cc]/15 text-[#3aa5cc]">

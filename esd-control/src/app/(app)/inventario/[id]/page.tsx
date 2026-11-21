@@ -78,7 +78,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ id: st
         }
       />
       {a.status === "blocked" ? <div className="mb-4"><Alert tone="bad" icon={ShieldAlert} title="Activo bloqueado">No debe utilizarse hasta resolver la incidencia.</Alert></div> : null}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Datos del activo" />

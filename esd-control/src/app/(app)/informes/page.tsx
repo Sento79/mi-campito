@@ -20,7 +20,7 @@ export default async function Reports() {
   return (
     <>
       <PageHeader title="Informes" description="Informes PDF aptos para revisión y auditoría: empresa, logo, filtros, fecha de generación, responsable, criterios aplicados y versión, numeración de páginas. Exportaciones XLSX/CSV para análisis." />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <ReportForm {...d} canExport={canExport} />
         <div className="space-y-4">
           <Card>

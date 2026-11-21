@@ -94,7 +94,7 @@ export function PlanUploadForm({ mode, planId, locations, users }: { mode: "crea
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <Card className="p-5">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {mode === "create" ? (
             <>
               <Field label="Título" htmlFor="title" required><Input id="title" name="title" required maxLength={200} /></Field>

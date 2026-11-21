@@ -34,13 +34,13 @@ function NumericEditor({ r, onChange }: { r: NumericRule; onChange: (r: NumericR
   );
   return (
     <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Unidad del criterio" htmlFor="ru-unit"><Select id="ru-unit" value={r.unit} onChange={(e) => onChange({ ...r, unit: e.target.value, allowedUnits: [] })}>{UNITS.map((u) => <option key={u.symbol} value={u.symbol}>{u.symbol} · {u.label}</option>)}</Select></Field>
         <fieldset><legend className="mb-1.5 text-sm font-medium">Unidades de entrada admitidas (conversión exacta)</legend>
           <div className="flex flex-wrap gap-3">{compatibleUnits(r.unit).filter((u) => u.symbol !== r.unit).map((u) => <Checkbox key={u.symbol} label={u.symbol} checked={(r.allowedUnits ?? []).includes(u.symbol)} onChange={(e) => onChange({ ...r, allowedUnits: e.target.checked ? [...(r.allowedUnits ?? []), u.symbol] : (r.allowedUnits ?? []).filter((x) => x !== u.symbol) })} />)}</div>
         </fieldset>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">{bound("min", "Límite inferior")}{bound("max", "Límite superior")}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{bound("min", "Límite inferior")}{bound("max", "Límite superior")}</div>
     </div>
   );
 }
@@ -143,7 +143,7 @@ export function RulesEditor({ criterionId, procedures, initial }: { criterionId:
             </div>
           </div>
         ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Procedimiento" htmlFor="ru-proc"><Select id="ru-proc" value={meta.procedureId} onChange={(e) => setMeta({ ...meta, procedureId: e.target.value })}><option value="">—</option>{procedures.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</Select></Field>
           <Field label="Referencia normativa / interna" htmlFor="ru-norm" hint="Norma y revisión aplicables según su sistema de calidad"><Input id="ru-norm" value={meta.normReference} onChange={(e) => setMeta({ ...meta, normReference: e.target.value })} /></Field>
         </div>

@@ -22,7 +22,7 @@ export function SettingsForm({ settings, severities }: { settings: OrgSettings; 
     <div className="space-y-4">
       <Card>
         <CardHeader title="Mediciones e instrumentos" />
-        <div className="grid gap-4 p-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
           <Field label="Instrumento requerido ausente o fuera de calibración" htmlFor="s-inst">
             <Select id="s-inst" value={v.instrumentPolicy} onChange={(e) => setV({ ...v, instrumentPolicy: e.target.value as OrgSettings["instrumentPolicy"] })}>
               <option value="block">Impedir el registro</option>
@@ -41,7 +41,7 @@ export function SettingsForm({ settings, severities }: { settings: OrgSettings; 
       </Card>
       <Card>
         <CardHeader title="Alertas" description="Días de aviso previo. Canal: notificaciones en la aplicación." />
-        <div className="grid gap-4 p-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3">
           <Field label="Mediciones (días)" htmlFor="s-due"><Input id="s-due" type="number" min={0} max={365} value={v.dueLeadDays} onChange={num("dueLeadDays")} /></Field>
           <Field label="Calibraciones (días)" htmlFor="s-cal"><Input id="s-cal" type="number" min={0} max={365} value={v.calibrationLeadDays} onChange={num("calibrationLeadDays")} /></Field>
           <Field label="NC y acciones (días)" htmlFor="s-ncd"><Input id="s-ncd" type="number" min={0} max={365} value={v.ncLeadDays} onChange={num("ncLeadDays")} /></Field>
@@ -50,7 +50,7 @@ export function SettingsForm({ settings, severities }: { settings: OrgSettings; 
       </Card>
       <Card>
         <CardHeader title="Lector de códigos (valores por defecto)" description="Cada dispositivo puede ajustarlo en Medición rápida" />
-        <div className="grid gap-4 p-5 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-4">
           <Field label="Sufijo" htmlFor="s-suf"><Select id="s-suf" value={v.scanner.suffix} onChange={(e) => setV({ ...v, scanner: { ...v.scanner, suffix: e.target.value as "Enter" } })}><option value="Enter">Enter</option><option value="Tab">Tab</option><option value="none">Ninguno</option></Select></Field>
           <Field label="Prefijo" htmlFor="s-pre"><Input id="s-pre" value={v.scanner.prefix} onChange={(e) => setV({ ...v, scanner: { ...v.scanner, prefix: e.target.value } })} /></Field>
           <Field label="Intervalo máx. (ms)" htmlFor="s-gap"><Input id="s-gap" type="number" min={10} max={300} value={v.scanner.maxInterKeyMs} onChange={(e) => setV({ ...v, scanner: { ...v.scanner, maxInterKeyMs: Number(e.target.value) || 50 } })} /></Field>
@@ -59,7 +59,7 @@ export function SettingsForm({ settings, severities }: { settings: OrgSettings; 
       </Card>
       <Card>
         <CardHeader title="Empresa e informes" actions={<UploadButton action={uploadLogoAction} fields={{}} accept=".png,.jpg,.jpeg" label="Subir logo" maxMb={1} />} />
-        <div className="grid gap-4 p-5 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
           <Field label="Nombre en informes" htmlFor="s-cn"><Input id="s-cn" value={v.company.displayName} onChange={(e) => setV({ ...v, company: { ...v.company, displayName: e.target.value } })} /></Field>
           <Field label="Pie de página de informes" htmlFor="s-ft"><Input id="s-ft" value={v.company.reportFooter} onChange={(e) => setV({ ...v, company: { ...v.company, reportFooter: e.target.value } })} /></Field>
           {/* eslint-disable-next-line @next/next/no-img-element */}

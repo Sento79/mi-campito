@@ -13,7 +13,7 @@ export function ProfileForms({ name, permissions }: { name: string; permissions:
   const chg = useAction(changePasswordAction);
   const router = useRouter();
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader title="Datos personales" />
         <div className="space-y-4 p-5">

@@ -185,7 +185,7 @@ function ScannerConfigModal({ cfg, onClose, onSave }: { cfg: ScannerConfig; onCl
   React.useEffect(() => buf.current.setConfig(c), [c]);
   return (
     <Modal open onClose={onClose} title="Configuración del lector" description="Se guarda en este dispositivo. Por defecto se usa la configuración de la organización." footer={<><Button variant="ghost" onClick={onClose}>Cancelar</Button><Button onClick={() => onSave(c)}>Guardar</Button></>}>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Sufijo que envía el lector" htmlFor="sc-suffix">
           <Select id="sc-suffix" value={c.suffix} onChange={(e) => setC({ ...c, suffix: e.target.value as ScannerConfig["suffix"] })}>
             <option value="Enter">Enter (habitual)</option>

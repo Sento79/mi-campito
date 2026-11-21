@@ -23,7 +23,7 @@ export function InstrumentForm({ v: initial, users, locations, readOnly }: { v: 
         if (r && !r.ok) setErrs(r.fieldErrors ?? {});
         if (r?.ok) { router.push(`/instrumentos/${r.data.id}`); router.refresh(); }
       }}>Guardar</Button> : null} />
-      <fieldset disabled={readOnly} className="grid gap-4 p-5 md:grid-cols-3">
+      <fieldset disabled={readOnly} className="grid grid-cols-1 gap-4 p-5 md:grid-cols-3">
         <Field label="Código" htmlFor="i-code" required error={errs.code}><Input id="i-code" className="font-mono" value={v.code} onChange={set("code")} /></Field>
         <Field label="Tipo" htmlFor="i-type" required hint="Debe coincidir con el tipo exigido por la categoría"><Input id="i-type" value={v.type} onChange={set("type")} list="instrument-types" /></Field>
         <datalist id="instrument-types"><option value="Medidor de resistencia" /><option value="Comprobador de pulseras" /><option value="Comprobador de calzado" /><option value="Medidor de campo electrostático" /><option value="Monitor de ionizador" /></datalist>

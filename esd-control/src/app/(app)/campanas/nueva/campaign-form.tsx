@@ -30,7 +30,7 @@ export function CampaignForm({ categories, locations, users, plans, me, initial 
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Nombre" htmlFor="c-name" required error={errs.name}><Input id="c-name" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
           <Field label="Inicio" htmlFor="c-start" required><Input id="c-start" type="date" value={v.startsOn} onChange={(e) => setV({ ...v, startsOn: e.target.value })} /></Field>
           <Field label="Fin" htmlFor="c-end" required error={errs.endsOn}><Input id="c-end" type="date" value={v.endsOn} onChange={(e) => setV({ ...v, endsOn: e.target.value })} /></Field>
@@ -42,7 +42,7 @@ export function CampaignForm({ categories, locations, users, plans, me, initial 
       </Card>
       <Card className="p-5">
         <h2 className="mb-3 text-sm font-semibold">Selección de elementos</h2>
-        <div className="grid gap-2 md:grid-cols-5" role="radiogroup" aria-label="Modo de creación">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-5" role="radiogroup" aria-label="Modo de creación">
           {MODES.map((m) => (
             <label key={m.k} className={`cursor-pointer rounded-lg border p-3 text-sm ${v.mode === m.k ? "border-primary bg-primary-soft" : "border-line hover:bg-surface-2"}`}>
               <input type="radio" name="mode" className="sr-only" checked={v.mode === m.k} onChange={() => setV({ ...v, mode: m.k })} disabled={m.k === "selection" && initial.assetIds.length === 0} />

@@ -156,3 +156,29 @@ test("QR de etiqueta: exige sesión y resuelve la ficha", async ({ page, context
   await expect(page).toHaveURL(/\/inventario\/[0-9a-f-]{36}$/);
   await expect(page.getByText("TAP-0001").first()).toBeVisible();
 });
+
+test.describe("móvil (360 px)", () => {
+  test.use({ viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true });
+
+  test("ninguna página es más ancha que la pantalla", async ({ page }) => {
+    await login(page, "responsable@demo.local");
+    const widths = async () => page.evaluate(() => ({ sw: document.documentElement.scrollWidth, vw: document.documentElement.clientWidth }));
+    const pages = ["/", "/medicion?asset=TAP-0001", "/inventario", "/planos", "/campanas", "/campanas/nueva", "/no-conformidades", "/instrumentos", "/etiquetas", "/informes", "/alertas", "/historial", "/admin/configuracion"];
+    for (const url of pages) {
+      await page.goto(url);
+      await page.waitForLoadState("networkidle");
+      const { sw, vw } = await widths();
+      expect(sw, `${url} desborda: ${sw}px > ${vw}px`).toBeLessThanOrEqual(vw);
+    }
+    // Detalle de activo, campaña y plano (enlaces desde los listados)
+    for (const [list, link] of [["/inventario", /\/inventario\/[0-9a-f-]{36}$/], ["/campanas", /\/campanas\/[0-9a-f-]{36}$/], ["/planos", /\/planos\/[0-9a-f-]{36}$/]] as const) {
+      await page.goto(list);
+      const href = await page.locator("a[href]").evaluateAll((as, re) => as.map((a) => a.getAttribute("href")).find((h) => h && new RegExp(re).test(h)), link.source);
+      expect(href, `sin enlace de detalle en ${list}`).toBeTruthy();
+      await page.goto(href!);
+      await page.waitForLoadState("networkidle");
+      const { sw, vw } = await widths();
+      expect(sw, `${href} desborda: ${sw}px > ${vw}px`).toBeLessThanOrEqual(vw);
+    }
+  });
+});

@@ -41,7 +41,7 @@ export function ProceduresTable({ rows, manage }: { rows: P[]; manage: boolean }
           const r = await a.run({ id: edit.id, code: edit.code, title: edit.title, revision: edit.revision, normReference: edit.normReference || null, description: edit.description || null, isActive: edit.isActive, reason: reason || null }, { success: "Procedimiento guardado" });
           if (r?.ok) { setEdit(null); router.refresh(); }
         }}>Guardar</Button></>}>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="Código" htmlFor="p-code" required><Input id="p-code" value={edit.code} onChange={(e) => setEdit({ ...edit, code: e.target.value })} /></Field>
             <Field label="Título" htmlFor="p-title" required className="sm:col-span-2"><Input id="p-title" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></Field>
             <Field label="Revisión" htmlFor="p-rev" required><Input id="p-rev" value={edit.revision} onChange={(e) => setEdit({ ...edit, revision: e.target.value })} /></Field>
