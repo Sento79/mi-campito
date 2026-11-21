@@ -21,5 +21,6 @@ grant execute on function
   app_auth_find_user(text), app_auth_register_attempt(uuid, boolean), app_auth_user_orgs(uuid),
   app_session_create(uuid, uuid, bytea, timestamptz, text, text), app_session_resolve(bytea), app_session_revoke(bytea), app_session_revoke_user(uuid),
   app_auth_set_password(uuid, text), app_user_create(text, text, text, uuid), app_next_counter(text),
-  app_location_subtree(uuid), app_location_path(uuid), app_period_interval(text, integer), app_generate_alert_notifications()
+  app_location_subtree(uuid), app_location_path(uuid), app_period_interval(text, integer), app_generate_alert_notifications(),
+  app_lock_categories(uuid[])
   to esd_app;

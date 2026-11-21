@@ -321,6 +321,36 @@ d("Endurecimiento tras revisión (0006)", () => {
     }
   });
 
+  it("un rol que solo edita activos bloquea la categoría antes de editar el activo", async () => {
+    const [role] = await o`select id from roles where org_id = ${A.orgId} and key = 'technician'`;
+    await o`insert into role_permissions(role_id, org_id, permission_key) values (${role.id}, ${A.orgId}, 'edit') on conflict do nothing`;
+    try {
+      // Sin permiso de edición, la función se niega
+      await expect(as(a, A.viewer, (tx) => tx`select app_lock_categories(${[catId]}::uuid[])`)).rejects.toThrow(/Permiso denegado/);
+      // Con «edit» (sin criteria.manage) la categoría queda bloqueada: un cambio concurrente espera
+      let release!: () => void;
+      const held = new Promise<void>((r) => (release = r));
+      let locked!: () => void;
+      const isLocked = new Promise<void>((r) => (locked = r));
+      const t1 = as(a, A.tech, async (tx) => {
+        await tx`select app_lock_categories(${[catId]}::uuid[])`;
+        locked();
+        await held;
+      });
+      await isLocked;
+      await expect(
+        o.begin(async (tx) => {
+          await tx`set local lock_timeout = '300ms'`;
+          await tx`update categories set name = name where id = ${catId}`;
+        }),
+      ).rejects.toThrow(/lock timeout/);
+      release();
+      await t1;
+    } finally {
+      await o`delete from role_permissions where role_id = ${role.id} and permission_key = 'edit'`;
+    }
+  });
+
   it("una función nueva del propietario no es ejecutable por PUBLIC ni por la app", async () => {
     const r = await o.begin(async (tx) => {
       await tx`create function tmp_priv_check() returns int language sql as 'select 1'`;

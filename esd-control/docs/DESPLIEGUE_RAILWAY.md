@@ -95,13 +95,26 @@ Notas:
   3. Guarde ese mismo valor en la variable `APP_DB_PASSWORD` del servicio; Railway redespliega con
      la nueva `DATABASE_URL`. Entre el paso 2 y el final del redespliegue, la versión en marcha no
      puede abrir conexiones nuevas: hágalo en un momento sin uso.
+
+  **Si el comando del paso 2 termina con error**, mire si llegó a escribir
+  `Contraseña de esd_app actualizada`. El cambio de contraseña se hace antes de las migraciones, así
+  que un error posterior no lo deshace:
+  - Si la línea **aparece**, el rol ya tiene la contraseña nueva: continúe con el paso 3 (o, para
+    volver atrás, repita el paso 2 con la contraseña anterior).
+  - Si **no aparece**, el rol conserva la anterior: no cambie la variable; corrija el error y repita.
+  - En caso de duda, compruebe una contraseña en la misma consola (responde `ok` si es la
+    vigente; si no, `password authentication failed`):
+
+    ```bash
+    node -e "require('postgres')(process.env.DATABASE_URL.replace(/:[^:@]*@/, ':' + process.argv[1] + '@'))\`select 1\`.then(() => { console.log('ok'); process.exit(0) }, (e) => { console.log(e.message); process.exit(1) })" CONTRASEÑA_A_PROBAR
+    ```
 - El usuario de `Postgres.DATABASE_URL` debe poder crear roles. El usuario `postgres` de la plantilla
   de Railway puede; si usa otra base de datos, créele antes el rol `esd_app` o dele `CREATEROLE`.
 - Si cambia `APP_URL` (por ejemplo, a un dominio propio), las etiquetas QR ya impresas seguirán
   apuntando al dominio anterior. Fije el dominio definitivo antes de imprimir etiquetas.
 
 Al guardar las variables, Railway despliega. En **Deployments → View logs** debe ver
-`Aplicada 0001_core.sql` … `8 migración(es) aplicada(s)` y, después, `Ready`.
+`Aplicada 0001_core.sql` … `9 migración(es) aplicada(s)` y, después, `Ready`.
 
 ## Paso 5 · Primer administrador (una sola vez)
 
@@ -157,7 +170,11 @@ registro sin su archivo, o el archivo sin su registro. Para una copia restaurabl
 2. Haga las dos copias: **Postgres → Backups → Create backup** (o `pg_dump`, ver
    `docs/OPERACION.md`) y **volumen de la app → Backups → Create backup**.
 3. Anote juntas las dos copias (fecha y hora, mismo nombre) y vuelva a levantar la aplicación.
-4. Para restaurar, use siempre **ese par**, con la aplicación parada.
+4. Para restaurar, use siempre **ese par** y mantenga la aplicación **parada durante las dos
+   restauraciones** (Railway redespliega el servicio al que pertenece cada volumen restaurado):
+   primero PostgreSQL; espere a que esté en marcha; después el volumen de la aplicación; por
+   último, vuelva a levantar la aplicación. Si se restaura primero el volumen de la app, esta podría
+   aceptar escrituras que la restauración de PostgreSQL perdería.
 
 Las copias automáticas de Railway siguen siendo útiles ante desastres, pero tras restaurarlas puede
 haber documentos sin archivo (o archivos sin registro). Guarde además volcados fuera de Railway.
