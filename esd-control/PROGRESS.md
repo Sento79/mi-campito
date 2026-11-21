@@ -72,3 +72,10 @@ Chromium de Playwright 1.63. No se ha verificado contra Supabase ni otros servic
 - Altas/ediciones/importación de activos serializadas por organización; importación detecta ID igual a un código de escaneo anterior; ambigüedad de categoría y ubicación por separado.
 - ZPL Code 128 con `>` literal.
 - Verificado: lint, typecheck, 150 tests Vitest, build y 9 E2E.
+
+## Despliegue en Railway
+
+- `Dockerfile` + `.dockerignore`, `railway.json` (migración previa al despliegue, salud en `/api/health`, reinicio ante fallo) y `railway.cron.json` (alertas diarias).
+- `npm start` escucha en `PORT` (Railway) y en todas las interfaces.
+- Guía: `docs/DESPLIEGUE_RAILWAY.md`.
+- Verificado en local con la imagen Docker contra una base vacía: migraciones (7), alta de administrador, arranque, `/api/health` 200, `/login` 200, tarea de alertas y migración repetida sin cambios. No se ha desplegado en Railway (requiere la cuenta del usuario).

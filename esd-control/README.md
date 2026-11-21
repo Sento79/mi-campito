@@ -150,11 +150,15 @@ Por defecto los tests usan `esd_owner` / `esd_owner_dev` y `esd_app` / `esd_app_
 
 Cualquier plataforma Node.js con disco persistente (VM, contenedor, PaaS con volumen) y un PostgreSQL gestionado.
 
+**Railway:** guía paso a paso en [`docs/DESPLIEGUE_RAILWAY.md`](docs/DESPLIEGUE_RAILWAY.md). Incluye `Dockerfile`, `railway.json` (migración previa al despliegue y comprobación de salud en `/api/health`) y `railway.cron.json` (alertas diarias).
+
+Pasos genéricos:
+
 1. `npm ci && npm run build`
 2. Variables de entorno de producción (`COOKIE_SECURE=true`, `APP_URL` con https, secretos fuertes, `DEMO_SEED_ENABLED=false`).
 3. `npm run db:migrate` (con `MIGRATION_DATABASE_URL`) en cada despliegue; las migraciones aplicadas no se pueden editar (se verifica su checksum).
 4. `npm run db:bootstrap` la primera vez.
-5. `npm start` detrás de un proxy inverso con HTTPS.
+5. `npm start` (escucha en `PORT`, 3000 por defecto) detrás de un proxy inverso con HTTPS. `GET /api/health` sirve como comprobación de salud.
 6. Tarea programada (p. ej. cada hora): `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://.../api/cron/alerts` o `npm run jobs:alerts`.
 7. Copias de seguridad de la BD **y** de `STORAGE_DIR` (ver abajo).
 
