@@ -77,3 +77,13 @@ export const RECORD_METHOD_LABEL: Record<string, string> = {
   checklist: "Checklist",
   combined: "Combinado",
 };
+
+export const CAMPAIGN_STATUS_TONE: Record<string, "ok" | "bad" | "warn" | "neutral" | "info" | "primary"> = {
+  draft: "neutral",
+  planned: "info",
+  in_progress: "primary",
+  in_review: "warn",
+  completed: "ok",
+  closed: "neutral",
+  cancelled: "neutral",
+};

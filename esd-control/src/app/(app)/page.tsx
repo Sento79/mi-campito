@@ -73,7 +73,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               hint="Activos programados conformes y al día"
             />
             <Kpi label="Campañas en curso" value={d.campaigns.active} icon={CalendarRange} href="/campanas?status=in_progress" hint={d.campaigns.late ? `${d.campaigns.late} atrasadas` : "Sin retrasos"} tone={d.campaigns.late ? "warn" : undefined} />
-            <Kpi label="NC abiertas" value={d.ncs.open} icon={ShieldAlert} tone={d.ncs.overdue ? "bad" : d.ncs.open ? "warn" : "ok"} href="/no-conformidades?status=open" hint={d.ncs.overdue ? `${d.ncs.overdue} fuera de plazo` : "En plazo"} />
+            <Kpi label="NC abiertas" value={d.ncs.open} icon={ShieldAlert} tone={d.ncs.overdue ? "bad" : d.ncs.open ? "warn" : "ok"} href="/no-conformidades?status=all_open" hint={d.ncs.overdue ? `${d.ncs.overdue} fuera de plazo` : "En plazo"} />
             <Kpi label="Calibración" value={d.instruments.expired + d.instruments.due_soon} icon={Gauge} tone={d.instruments.expired ? "bad" : d.instruments.due_soon ? "warn" : "ok"} href="/instrumentos?cal=due" hint={`${d.instruments.expired} vencidas · ${d.instruments.due_soon} próximas`} />
           </div>
         </Widget>
