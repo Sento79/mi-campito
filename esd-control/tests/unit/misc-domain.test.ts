@@ -183,3 +183,18 @@ describe("importación de activos", () => {
     expect(p.issues[0].message).toMatch(/codigo/);
   });
 });
+
+import { imageMatrix, applyMatrix } from "@/lib/domain/coords";
+describe("matriz de imagen coherente con los marcadores", () => {
+  const img = { width: 1600, height: 1000 };
+  it.each([0, 90, 180, 270] as const)("rotación %i: la imagen y los puntos coinciden", (rotation) => {
+    const vp = { scale: 0.42, offsetX: 33, offsetY: -12, rotation };
+    const m = imageMatrix(img, vp);
+    for (const p of [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0.3, y: 0.7 }, { x: 1, y: 1 }]) {
+      const viaMatrix = applyMatrix(m, { x: p.x * img.width, y: p.y * img.height });
+      const viaNorm = normToScreen(p, img, vp);
+      expect(viaMatrix.x).toBeCloseTo(viaNorm.x, 6);
+      expect(viaMatrix.y).toBeCloseTo(viaNorm.y, 6);
+    }
+  });
+});

@@ -94,3 +94,25 @@ export function zoomAt(vp: Viewport, factor: number, anchor: Point, min = 0.02, 
   const k = scale / vp.scale;
   return { ...vp, scale, offsetX: anchor.x - (anchor.x - vp.offsetX) * k, offsetY: anchor.y - (anchor.y - vp.offsetY) * k };
 }
+
+/**
+ * Matriz CSS (a, b, c, d, e, f) que dibuja la imagen (en px naturales, con
+ * transform-origin 0 0) exactamente donde normToScreen sitúa los puntos.
+ */
+export function imageMatrix(img: Size, vp: Viewport): [number, number, number, number, number, number] {
+  const s = vp.scale;
+  switch (vp.rotation) {
+    case 0:
+      return [s, 0, 0, s, vp.offsetX, vp.offsetY];
+    case 90:
+      return [0, s, -s, 0, vp.offsetX + s * img.height, vp.offsetY];
+    case 180:
+      return [-s, 0, 0, -s, vp.offsetX + s * img.width, vp.offsetY + s * img.height];
+    case 270:
+      return [0, -s, s, 0, vp.offsetX, vp.offsetY + s * img.width];
+  }
+}
+
+export function applyMatrix(m: [number, number, number, number, number, number], p: Point): Point {
+  return { x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] };
+}
