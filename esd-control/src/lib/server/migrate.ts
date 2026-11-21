@@ -24,8 +24,9 @@ export async function runMigrations(opts: { ownerUrl: string; appPassword: strin
     await sql`alter default privileges revoke execute on functions from public`;
     await sql`create table if not exists schema_migrations (version text primary key, checksum text not null, applied_at timestamptz not null default now())`;
 
-    if (!/^[\x20-\x7e]{8,128}$/.test(opts.appPassword) || opts.appPassword.includes("'")) {
-      throw new Error("APP_DB_PASSWORD debe tener entre 8 y 128 caracteres ASCII imprimibles y sin comillas simples");
+    // Solo caracteres seguros en una URL: la contraseña se inserta sin codificar en DATABASE_URL
+    if (!/^[A-Za-z0-9._~-]{8,128}$/.test(opts.appPassword)) {
+      throw new Error("APP_DB_PASSWORD debe tener entre 8 y 128 caracteres: letras, dígitos y . _ ~ - (se inserta tal cual en DATABASE_URL)");
     }
     const [role] = await sql`select 1 from pg_roles where rolname = ${APP_ROLE}`;
     if (!role) {

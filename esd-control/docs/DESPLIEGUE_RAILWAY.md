@@ -1,7 +1,7 @@
 # Despliegue en Railway
 
-La aplicación se despliega en Railway con una imagen Docker (`Dockerfile`) y la configuración de
-`railway.json`. Cada despliegue:
+La aplicación se despliega en Railway con una imagen Docker (`Dockerfile`, que Railway detecta en el
+directorio raíz del servicio). Configurado como se indica abajo, cada despliegue:
 
 1. construye la imagen (`npm ci` + `next build`);
 2. ejecuta **antes de publicar** las migraciones (`npm run db:migrate`): si fallan, el despliegue se
@@ -32,12 +32,21 @@ En el servicio creado desde el repositorio, **Settings**:
 | Ajuste | Valor |
 |---|---|
 | Source → Root Directory | `/esd-control` |
-| Config-as-code → Railway Config File | `/esd-control/railway.json` (la ruta no sigue al Root Directory: escríbala completa) |
 | Source → Branch | la rama que quiera desplegar (p. ej. `main` cuando se fusione el PR) |
+| Deploy → Pre-deploy Command | `npm run db:migrate` |
+| Deploy → Healthcheck Path | `/api/health` |
+| Deploy → Restart Policy | *On Failure* (5 reintentos) |
 | Networking → Public Networking | **Generate Domain** |
 
-Con el archivo de configuración, el builder (Dockerfile), la migración previa, la comprobación de
-salud y la política de reinicio quedan fijados en el repositorio.
+Railway construye con el `Dockerfile` al encontrarlo en el Root Directory; no hay que elegir builder.
+El **Pre-deploy Command** es imprescindible: sin él no se aplican las migraciones y la app no
+arranca contra una base vacía.
+
+El repositorio incluye además `railway.json` con esos mismos ajustes (y `railway.cron.json` para el
+Paso 6), para servicios que admitan configuración desde archivo (*Settings → Config-as-code →
+Railway Config File*, con la ruta completa `/esd-control/railway.json`: no sigue al Root Directory).
+Railway ha anunciado cambios en esa función; si su servicio no ofrece la opción, use los ajustes del
+panel de la tabla, que dan el mismo resultado. Si la usa, el archivo prevalece sobre el panel.
 
 ## Paso 3 · Volumen de archivos
 
@@ -53,7 +62,8 @@ despliegue.
 En el servicio de la aplicación, **Variables → Raw Editor**, pegue esto y sustituya lo marcado:
 
 ```env
-# Contraseña del rol esd_app: genérela con `openssl rand -hex 24` (8-128 caracteres ASCII, sin comillas simples)
+# Contraseña del rol esd_app: genérela con `openssl rand -hex 24`. Solo letras, dígitos y . _ ~ -
+# (se inserta sin codificar en DATABASE_URL; la migración rechaza otros caracteres)
 APP_DB_PASSWORD=SUSTITUIR_por_una_contraseña_aleatoria
 
 # Migraciones: el usuario propietario de la base de datos de Railway
@@ -76,9 +86,15 @@ CRON_SECRET=
 Notas:
 
 - `DATABASE_URL` usa la red privada de Railway (`PGHOST` es el host interno), sin pasar por Internet.
-- La primera migración **crea** el rol `esd_app` con `APP_DB_PASSWORD`. Para cambiarla después no
-  basta con editar la variable: ejecute una vez `npm run db:migrate -- --rotate-app-password` (ver
-  Paso 6) y luego redespliegue.
+- La primera migración **crea** el rol `esd_app` con `APP_DB_PASSWORD`. Editar la variable después
+  no cambia la contraseña del rol. Para rotarla:
+  1. Genere la nueva (`openssl rand -hex 24`).
+  2. Abra una consola en el servicio con `railway ssh` (Paso 5; `railway run` no sirve) y pase el
+     valor nuevo explícitamente, porque el contenedor aún tiene el anterior:
+     `APP_DB_PASSWORD=<nueva> npm run db:migrate -- --rotate-app-password`
+  3. Guarde ese mismo valor en la variable `APP_DB_PASSWORD` del servicio; Railway redespliega con
+     la nueva `DATABASE_URL`. Entre el paso 2 y el final del redespliegue, la versión en marcha no
+     puede abrir conexiones nuevas: hágalo en un momento sin uso.
 - El usuario de `Postgres.DATABASE_URL` debe poder crear roles. El usuario `postgres` de la plantilla
   de Railway puede; si usa otra base de datos, créele antes el rol `esd_app` o dele `CREATEROLE`.
 - Si cambia `APP_URL` (por ejemplo, a un dominio propio), las etiquetas QR ya impresas seguirán
@@ -102,9 +118,14 @@ exit
 ```
 
 `railway run` **no** sirve aquí: ejecuta el comando en su ordenador, que no llega a la red privada
-de Railway. Si no quiere instalar la CLI, puede añadir las cinco variables `BOOTSTRAP_*` al servicio,
-cambiar temporalmente el *Pre-deploy Command* a `npm run db:migrate && npm run db:bootstrap`,
-desplegar, y después **borrar** las variables y restaurar el comando.
+de Railway. Sin la CLI, puede hacerlo con un despliegue temporal:
+
+1. Añada las cinco variables `BOOTSTRAP_*` al servicio.
+2. Cambie el *Pre-deploy Command* a `npm run db:migrate && npm run db:bootstrap` y despliegue.
+   Si el servicio usa `railway.json` (Config-as-code), el archivo prevalece sobre el panel: el
+   cambio hay que hacerlo en `preDeployCommand` de ese archivo (en la rama desplegada), no en el panel.
+3. Cuando el registro muestre `Organización … lista con administrador …`, **borre** las variables
+   `BOOTSTRAP_*` y restaure `npm run db:migrate`.
 
 Entre en `https://<su-dominio>/login` con esa cuenta y cambie la contraseña desde su perfil. Los
 criterios de aceptación, categorías, ubicaciones y usuarios se configuran desde **Administración**.
@@ -114,9 +135,9 @@ criterios de aceptación, categorías, ubicaciones y usuarios se configuran desd
 Las notificaciones de vencimientos y calibraciones se generan con `npm run jobs:alerts`. En Railway:
 
 1. **+ New → GitHub Repo** con el mismo repositorio (un segundo servicio, p. ej. `alertas`).
-2. Settings: Root Directory `/esd-control`, Railway Config File **`/esd-control/railway.cron.json`**.
-   Ese archivo fija la orden y el horario: todos los días a las 05:17 UTC (`17 5 * * *`). Cámbielo
-   en el archivo o en *Settings → Cron Schedule*.
+2. Settings: Root Directory `/esd-control`; *Deploy → Custom Start Command* `npm run jobs:alerts`;
+   *Cron Schedule* `17 5 * * *` (todos los días a las 05:17 UTC); *Restart Policy* *Never*; sin
+   Pre-deploy Command ni Healthcheck Path. (Equivale a `railway.cron.json` si usa Config-as-code.)
 3. Variables: `DATABASE_URL=${{esd-control.DATABASE_URL}}` (sustituya `esd-control` por el nombre
    del servicio de la aplicación). No necesita volumen ni dominio.
 
@@ -126,10 +147,20 @@ alternativa, un programador externo puede llamar a `POST /api/cron/alerts` con l
 
 ## Copias de seguridad
 
-- Active las copias del servicio Postgres en Railway (**Postgres → Backups**) y, además, haga
-  volcados periódicos fuera de Railway (`pg_dump`, ver `docs/OPERACION.md`).
-- El volumen `/data/storage` contiene los archivos originales (planos, fotos): también tiene copias
-  en **Volume → Backups**. Una restauración debe recuperar **a la vez** base de datos y volumen.
+La base de datos (en el volumen del servicio Postgres) y los archivos (en el volumen
+`/data/storage` de la app) se copian por separado. Dos copias programadas de forma independiente
+**no** forman un par coherente: si se sube un plano entre una y otra, al restaurar quedará el
+registro sin su archivo, o el archivo sin su registro. Para una copia restaurable:
+
+1. Detenga las escrituras parando el servicio de la **aplicación** (por ejemplo, retirando su
+   despliegue activo en *Deployments*); el servicio Postgres sigue en marcha.
+2. Haga las dos copias: **Postgres → Backups → Create backup** (o `pg_dump`, ver
+   `docs/OPERACION.md`) y **volumen de la app → Backups → Create backup**.
+3. Anote juntas las dos copias (fecha y hora, mismo nombre) y vuelva a levantar la aplicación.
+4. Para restaurar, use siempre **ese par**, con la aplicación parada.
+
+Las copias automáticas de Railway siguen siendo útiles ante desastres, pero tras restaurarlas puede
+haber documentos sin archivo (o archivos sin registro). Guarde además volcados fuera de Railway.
 
 ## Problemas frecuentes
 
