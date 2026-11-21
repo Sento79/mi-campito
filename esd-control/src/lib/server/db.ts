@@ -16,7 +16,8 @@ export function createAppSql(url: string, max = 10): Sql {
     max,
     idle_timeout: 30,
     connect_timeout: 10,
-    connection: { TimeZone: "UTC", application_name: "esd-control" },
+    // Salvaguardas: ninguna consulta ni transacción ociosa puede retener una conexión indefinidamente.
+    connection: { TimeZone: "UTC", application_name: "esd-control", statement_timeout: 30000, idle_in_transaction_session_timeout: 60000 },
     // Las columnas DATE se devuelven como texto AAAA-MM-DD (sin desfase horario)
     types: {
       date: { to: 1082, from: [1082], serialize: (x: string) => x, parse: (x: string) => x },
@@ -30,7 +31,7 @@ export function getSql(): Sql {
   if (!globalForDb.__esdSql) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error("DATABASE_URL no está configurada (ver .env.example)");
-    globalForDb.__esdSql = createAppSql(url);
+    globalForDb.__esdSql = createAppSql(url, Number(process.env.DB_POOL_MAX ?? 15));
   }
   return globalForDb.__esdSql;
 }

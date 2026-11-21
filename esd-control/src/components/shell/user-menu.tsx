@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter } from "next/navigation";
 import { LogOut, Moon, Sun, Building2, UserRound, Check } from "lucide-react";
 import type { ShellUser } from "./app-shell";

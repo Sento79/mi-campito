@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter } from "next/navigation";
 import { Archive, MapPinned, Tags, ScanLine, CalendarPlus, Boxes } from "lucide-react";
 import { Badge, Button, EmptyState, ResultBadge, Table, Td, Th, Select } from "@/components/ui/core";

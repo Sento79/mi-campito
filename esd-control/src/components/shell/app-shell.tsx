@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronsLeft, ChevronsRight, Menu, Zap, X, FlaskConical } from "lucide-react";
 import { NAV, SEGMENT_LABEL } from "./nav";

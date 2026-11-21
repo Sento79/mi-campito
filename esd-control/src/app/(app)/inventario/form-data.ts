@@ -1,4 +1,5 @@
 import "server-only";
+import type { Row as DbRow } from "postgres";
 import type { Tx } from "@/lib/server/db";
 import { categoryOptions, locationOptions, userOptions } from "@/lib/server/queries/common";
 
@@ -19,7 +20,7 @@ export async function assetFormOptions(tx: Tx) {
   };
 }
 
-export function assetToForm(a: Record<string, any>) {
+export function assetToForm(a: DbRow) {
   return {
     code: a.code,
     scanCode: a.scan_code === a.code ? "" : a.scan_code,

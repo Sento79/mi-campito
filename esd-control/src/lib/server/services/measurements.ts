@@ -1,4 +1,5 @@
 import "server-only";
+import type { Row as DbRow } from "postgres";
 import { z } from "zod";
 import type { Tx, Ctx } from "../db";
 import { audit } from "../audit";
@@ -40,21 +41,21 @@ export async function activeCriterionVersion(tx: Tx, criterionId: string | null)
 }
 
 export interface MeasurementTarget {
-  asset: Record<string, any> | null;
-  point: Record<string, any> | null;
-  category: Record<string, any> | null;
+  asset: DbRow | null;
+  point: DbRow | null;
+  category: DbRow | null;
   criterion: CriterionVersionRow | null;
   rules: CriterionRules | null;
   expectedPoints: ExpectedPoint[];
-  procedure: Record<string, any> | null;
+  procedure: DbRow | null;
   instrumentRequired: boolean;
   instrumentTypes: string[];
-  lastMeasurements: Record<string, any>[];
+  lastMeasurements: DbRow[];
 }
 
 /** Reúne todo lo necesario para medir un activo o un punto de plano. */
 export async function loadTarget(tx: Tx, ref: { assetId?: string | null; planPointId?: string | null }): Promise<MeasurementTarget> {
-  let point: Record<string, any> | null = null;
+  let point: DbRow | null = null;
   let assetId = ref.assetId ?? null;
   if (ref.planPointId) {
     point = (await tx`select pp.*, fp.title as plan_title from plan_points pp join floor_plans fp on fp.id = pp.plan_id where pp.id = ${ref.planPointId}`)[0] ?? null;
@@ -63,7 +64,7 @@ export async function loadTarget(tx: Tx, ref: { assetId?: string | null; planPoi
     if (point.point_type === "reference") throw new AppError("Los puntos de referencia no se miden");
     if (point.asset_id) assetId = assetId ?? point.asset_id;
   }
-  let asset: Record<string, any> | null = null;
+  let asset: DbRow | null = null;
   if (assetId) {
     asset = (await tx`
       select a.*, l.name as location_name, l.code as location_code, app_location_path(a.location_id) as location_path
@@ -155,7 +156,7 @@ export interface RecordResult {
   ncCode: string | null;
 }
 
-function instrumentValidity(inst: Record<string, any> | null, today: string) {
+function instrumentValidity(inst: DbRow | null, today: string) {
   if (!inst) return { calibrationValid: null as boolean | null, status: undefined as string | undefined };
   const valid = inst.last_calibrated_on && inst.calibration_due_on ? inst.calibration_due_on >= today : null;
   return { calibrationValid: valid, status: inst.status as string };
@@ -174,7 +175,7 @@ export async function recordMeasurement(tx: Tx, ctx: Ctx, settings: OrgSettings,
   if (target.asset?.status === "retired") throw new AppError("El activo está retirado y no admite mediciones");
 
   const today = new Date().toISOString().slice(0, 10);
-  let instrument: Record<string, any> | null = null;
+  let instrument: DbRow | null = null;
   if (input.instrumentId) {
     instrument = (await tx`select id, code, type, status, last_calibrated_on, calibration_due_on, archived_at from instruments where id = ${input.instrumentId}`)[0] ?? null;
     if (!instrument) throw new NotFoundError("Instrumento no encontrado");

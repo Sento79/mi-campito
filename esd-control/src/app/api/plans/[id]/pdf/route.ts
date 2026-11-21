@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Row as DbRow } from "postgres";
 import { z } from "zod";
 import { api } from "@/lib/server/api";
 import { withCtx } from "@/lib/server/db";
@@ -45,7 +46,7 @@ export const GET = api({ permission: "reports" }, async (req, s, params) => {
   });
   if (!out) return NextResponse.json({ error: "Plano no encontrado" }, { status: 404 });
   const { doc, done } = createReport(out.meta);
-  const statusOf = (p: Record<string, any>) => {
+  const statusOf = (p: DbRow) => {
     if (p.point_type === "reference") return "reference";
     let r = p.last_result;
     if (out.campaign) {

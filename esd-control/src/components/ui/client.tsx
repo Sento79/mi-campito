@@ -187,7 +187,7 @@ export function useAction<I, T>(fn: (i: I) => Promise<{ ok: true; data: T; messa
       try {
         const r = await fn(input);
         if (!r.ok) {
-          toast({ tone: "bad", title: r.error, body: r.fieldErrors ? Object.entries(r.fieldErrors).slice(0, 4).map(([k, v]) => `${k}: ${v}`).join("\n") : undefined });
+          toast({ tone: "bad", title: r.error, body: r.fieldErrors ? [...new Set(Object.values(r.fieldErrors))].slice(0, 4).join("\n") : undefined });
           return r;
         }
         if (opts?.success && !opts.silent) toast({ tone: "ok", title: opts.success });

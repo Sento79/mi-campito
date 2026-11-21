@@ -30,7 +30,8 @@ export function useScannerConfig(orgDefault: ScannerConfig) {
  * está en el propio campo de escaneo. Distingue lector de teclado humano por
  * la cadencia (ScanBuffer).
  */
-export function useHidCapture(cfg: ScannerConfig, enabled: boolean, onScan: (code: string) => void, scanInput: React.RefObject<HTMLInputElement | null>) {
+export function useHidCapture(cfg: ScannerConfig, enabled: boolean, onScan: (code: string) => void, scanInput: React.RefObject<HTMLInputElement | null>): boolean {
+  const [listening, setListening] = React.useState(false);
   const bufRef = React.useRef(new ScanBuffer(cfg));
   const cb = React.useRef(onScan);
   cb.current = onScan;
@@ -57,11 +58,14 @@ export function useHidCapture(cfg: ScannerConfig, enabled: boolean, onScan: (cod
       }
     };
     window.addEventListener("keydown", onKey, true);
+    setListening(true);
     return () => {
       window.removeEventListener("keydown", onKey, true);
+      setListening(false);
       if (idleTimer) clearTimeout(idleTimer);
     };
   }, [enabled, cfg, scanInput]);
+  return listening;
 }
 
 export function ScanBar({
@@ -118,7 +122,7 @@ export function ScanBar({
       <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
         <Keyboard className="size-3.5" aria-hidden />
         <span className={cn("inline-block size-2 rounded-full", captureActive ? "bg-ok" : "bg-faint")} aria-hidden />
-        {captureActive ? "Lector HID activo: puede escanear sin hacer clic en el campo." : "Captura del lector en pausa mientras completa el formulario: use el campo de arriba."}
+        <span data-hid-ready={captureActive ? "1" : "0"}>{captureActive ? "Lector HID activo: puede escanear sin hacer clic en el campo." : "Iniciando lector… (puede usar el campo de arriba)"}</span>
         <span className="ml-auto hidden sm:inline">F2 enfocar · Ctrl+Enter guardar · Alt+M medición rápida</span>
       </p>
       {camOpen ? <CameraScanner onClose={() => setCamOpen(false)} onCode={(c) => { setCamOpen(false); onSubmit(normalizeScanValue(c, cfg.prefix)); }} /> : null}

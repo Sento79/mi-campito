@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, ChevronRight, MapPin } from "lucide-react";
 import { Badge, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui/core";

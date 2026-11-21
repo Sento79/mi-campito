@@ -34,16 +34,18 @@ function sessionTtlHours() {
 }
 
 // Limitador sencillo en memoria por IP (complementa el bloqueo por usuario en BD).
-const attempts = new Map<string, { n: number; reset: number }>();
-function rateLimited(key: string, max = 20, windowMs = 10 * 60_000): boolean {
+// Solo cuentan los intentos FALLIDOS.
+const failures = new Map<string, { n: number; reset: number }>();
+const MAX_FAILURES_PER_IP = 20;
+function ipBlocked(ip: string): boolean {
+  const a = failures.get(ip);
+  return !!a && a.reset > Date.now() && a.n >= MAX_FAILURES_PER_IP;
+}
+function registerFailure(ip: string) {
   const now = Date.now();
-  const a = attempts.get(key);
-  if (!a || a.reset < now) {
-    attempts.set(key, { n: 1, reset: now + windowMs });
-    return false;
-  }
-  a.n++;
-  return a.n > max;
+  const a = failures.get(ip);
+  if (!a || a.reset < now) failures.set(ip, { n: 1, reset: now + 10 * 60_000 });
+  else a.n++;
 }
 
 async function clientInfo() {
@@ -57,14 +59,18 @@ export type LoginResult = { ok: true } | { ok: false; error: string };
 export async function login(email: string, password: string, orgId?: string): Promise<LoginResult> {
   const sql = getSql();
   const { ip, ua } = await clientInfo();
-  if (rateLimited(`ip:${ip}`)) return { ok: false, error: "Demasiados intentos. Espere unos minutos." };
+  if (ipBlocked(ip)) return { ok: false, error: "Demasiados intentos. Espere unos minutos." };
   const [u] = await sql`select * from app_auth_find_user(${email.trim().toLowerCase()})`;
   const ok = await bcrypt.compare(password, u?.password_hash ?? getDummyHash());
-  if (!u) return { ok: false, error: "Credenciales no válidas" };
+  if (!u) {
+    registerFailure(ip);
+    return { ok: false, error: "Credenciales no válidas" };
+  }
   if (u.locked_until && new Date(u.locked_until) > new Date()) {
     return { ok: false, error: "Cuenta bloqueada temporalmente por intentos fallidos. Inténtelo más tarde." };
   }
   if (!ok || !u.is_active) {
+    registerFailure(ip);
     await sql`select app_auth_register_attempt(${u.id}, false)`;
     logger.warn("auth.login_failed", { userId: u.id });
     return { ok: false, error: "Credenciales no válidas" };
@@ -136,7 +142,9 @@ export const getSession = cache(async (): Promise<SessionInfo | null> => {
        where u.id = ${ctx.userId}`;
     if (!row) return null;
     const perms = await tx`select permission_key from role_permissions where role_id = ${row.role_id}`;
-    const orgs = await sql`select * from app_auth_user_orgs(${ctx.userId})`;
+    // IMPORTANTE: usar la misma conexión (tx). Pedir otra al pool dentro de una
+    // transacción puede agotar el pool con peticiones concurrentes (interbloqueo).
+    const orgs = await tx`select * from app_auth_user_orgs(${ctx.userId})`;
     return {
       ...ctx,
       sessionId: s.session_id,

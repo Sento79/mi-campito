@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Save, RotateCcw, MapPin, ClipboardList, Gauge, AlertTriangle, Info, CheckCircle2, WifiOff, ChevronRight, Route, Camera, Repeat, History } from "lucide-react";
 import { Alert, Badge, Button, Card, Checkbox, ResultBadge, Select, Textarea, cn } from "@/components/ui/core";
@@ -70,7 +70,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
     return () => clearTimeout(t);
   }, [draftKey, form, mode, reason, comment]);
 
-  const resetForm = () => {
+  const resetForm = React.useCallback(() => {
     setForm(emptyForm());
     setMode("measure");
     setReason({ r: "", d: "" });
@@ -79,7 +79,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
     setPhoto(null);
     setRepeat(null);
     setCreateNc(settings.autoCreateNc !== "never");
-  };
+  }, [settings.autoCreateNc]);
 
   const applyTarget = React.useCallback(
     (dto: TargetDTO, cached = false) => {
@@ -109,8 +109,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
         cacheTarget(orgId, keys, dto);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [orgId, routeCampaign],
+    [orgId, routeCampaign, resetForm, toast],
   );
 
   const lookup = React.useCallback(
@@ -183,8 +182,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
     else scanRef.current?.focus();
   }, [sp, lookup, loadNext, routeCampaign]);
 
-  const capturing = !saving;
-  useHidCapture(cfg, capturing, (code) => lookup({ scan: code }), scanRef);
+  const capturing = useHidCapture(cfg, !saving, (code) => lookup({ scan: code }), scanRef);
 
   // Vista previa (provisional): el servidor recalcula al guardar
   const selectedInstrument = instruments.find((i) => i.id === instrumentId);
@@ -306,7 +304,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
       savingRef.current = false;
       setSaving(false);
     }
-  }, [target, mode, reason, hasAnyValue, preview, comment, photo, settings.requireSignature, signature, repeat, campaignId, notRequired, instrumentId, input, canCreateNc, createNc, orgId, toast, draftKey, router, routeCampaign, routeInfo, loadNext]);
+  }, [target, mode, reason, hasAnyValue, preview, comment, photo, settings.requireSignature, signature, repeat, campaignId, notRequired, instrumentId, input, canCreateNc, createNc, orgId, toast, draftKey, router, routeCampaign, routeInfo, loadNext, resetForm]);
 
   // Atajos: F2 enfocar escáner, Ctrl+Enter guardar, 1-9 opciones de selección
   React.useEffect(() => {

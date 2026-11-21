@@ -1,5 +1,5 @@
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { clsx } from "clsx";
 import { CheckCircle2, XCircle, AlertTriangle, CircleDashed, MinusCircle, Ban, HelpCircle, Inbox, type LucideIcon } from "lucide-react";
 import { RESULT_LABEL, RESULT_TONE, type Result } from "@/lib/domain/results";

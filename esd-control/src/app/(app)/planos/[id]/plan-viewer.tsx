@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { useRouter } from "next/navigation";
 import {
   ZoomIn, ZoomOut, Maximize, RotateCw, MousePointer2, Plus, Move, Route, Download, FileDown, ScanLine, Pencil, Archive, X, CalendarPlus, Lock, Search, Check, CircleDashed, AlertTriangle, Diamond, History,
@@ -8,7 +8,6 @@ import {
 import { Badge, Button, Checkbox, Field, Input, ResultBadge, Select, Textarea, cn } from "@/components/ui/core";
 import { ConfirmDialog, Modal, useAction, useToast } from "@/components/ui/client";
 import { fitToContainer, imageMatrix, normToScreen, screenToNorm, zoomAt, type Viewport } from "@/lib/domain/coords";
-import { RESULT_LABEL } from "@/lib/domain/results";
 import { fmtDateTime } from "@/lib/format";
 import { archivePointAction, createPointAction, movePointAction, setRouteAction, updatePointAction } from "../actions";
 

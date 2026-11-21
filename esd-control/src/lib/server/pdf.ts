@@ -87,7 +87,7 @@ export function hr(doc: Doc) {
 }
 
 export function heading(doc: Doc, text: string) {
-  ensureSpace(doc, 40);
+  ensureSpace(doc, 90); // evita títulos huérfanos al final de página
   doc.moveDown(0.4).font("B").fontSize(12).fillColor(COLORS.text).text(text, doc.page.margins.left);
   doc.moveDown(0.3);
 }
@@ -144,14 +144,16 @@ export function table(doc: Doc, cols: Column[], rows: string[][], opts: { fontSi
   drawHeader();
   for (const r of rows) {
     doc.font("R").fontSize(fs);
-    const h = Math.max(...r.map((cell, i) => doc.heightOfString(cell ?? "", { width: widths[i] - 2 * pad }))) + 6;
+    // Las celdas extra (más allá de las columnas) solo sirven a las funciones de color
+    const cells = r.slice(0, cols.length);
+    const h = Math.max(...cells.map((cell, i) => doc.heightOfString(cell ?? "", { width: widths[i] - 2 * pad }))) + 6;
     if (doc.y + h > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
       drawHeader();
     }
     const y = doc.y;
     let x = left;
-    r.forEach((cell, i) => {
+    cells.forEach((cell, i) => {
       doc.font("R").fontSize(fs).fillColor(cols[i].color?.(r) ?? COLORS.text).text(cell ?? "", x + pad, y + 3, { width: widths[i] - 2 * pad, align: cols[i].align ?? "left" });
       x += widths[i];
     });

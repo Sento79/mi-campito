@@ -1,6 +1,6 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { notFound } from "next/navigation";
-import { Pencil, Copy, Tags, ScanLine, ShieldAlert } from "lucide-react";
+import { Pencil, Copy, Tags, ScanLine, ShieldAlert, FileDown } from "lucide-react";
 import { requirePermission } from "@/lib/server/auth";
 import { withCtx } from "@/lib/server/db";
 import { Badge, ButtonLink, Card, CardHeader, DefinitionList, EmptyState, PageHeader, ResultBadge, Table, Td, Th, Alert } from "@/components/ui/core";
@@ -70,6 +70,7 @@ export default async function AssetDetail({ params }: { params: Promise<{ id: st
           <>
             {s.permissions.has("measure") && measurable ? <ButtonLink href={`/medicion?asset=${encodeURIComponent(a.code)}`} icon={ScanLine}>Medir</ButtonLink> : null}
             <ButtonLink href={`/etiquetas?assets=${a.id}`} variant="outline" icon={Tags}>Etiqueta</ButtonLink>
+            {s.permissions.has("reports") ? <ButtonLink prefetch={false} href={`/api/reports/asset/${a.id}`} variant="outline" icon={FileDown}>Informe</ButtonLink> : null}
             {canEdit ? <ButtonLink href={`/inventario/${a.id}/editar`} variant="outline" icon={Pencil}>Editar</ButtonLink> : null}
             {s.permissions.has("create") ? <ButtonLink href={`/inventario/nuevo?duplicar=${a.id}`} variant="outline" icon={Copy}>Duplicar</ButtonLink> : null}
             {canEdit ? <ArchiveToggle id={a.id} archived={!!a.archived_at} /> : null}

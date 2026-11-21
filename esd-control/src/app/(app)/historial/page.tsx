@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/link";
 import { Download } from "lucide-react";
 import { requirePermission } from "@/lib/server/auth";
 import { withCtx } from "@/lib/server/db";

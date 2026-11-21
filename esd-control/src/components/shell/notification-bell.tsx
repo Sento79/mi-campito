@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
+import Link from "@/components/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { listNotificationsAction, markNotificationsReadAction } from "./shell-actions";
 import { fmtRelative } from "@/lib/format";
