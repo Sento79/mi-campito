@@ -147,7 +147,7 @@ export async function transitionCampaign(tx: Tx, ctx: Ctx, perms: Set<string>, i
 }
 
 export async function skipItem(tx: Tx, ctx: Ctx, itemId: string, reason: string) {
-  const [it] = await tx`select ci.id, ci.status, c.code, c.status as cstatus from campaign_items ci join campaigns c on c.id = ci.campaign_id where ci.id = ${itemId}`;
+  const [it] = await tx`select ci.id, ci.status, c.code, c.status as cstatus from campaign_items ci join campaigns c on c.id = ci.campaign_id where ci.id = ${itemId} for share of c`;
   if (!it) throw new NotFoundError("Elemento no encontrado");
   if (["closed", "cancelled"].includes(it.cstatus)) throw new AppError("La campaña no admite cambios");
   if (it.status !== "pending") throw new AppError("Solo se pueden omitir elementos pendientes");

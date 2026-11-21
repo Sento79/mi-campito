@@ -190,6 +190,15 @@ d("Mediciones: resultado, trazabilidad e inmutabilidad", () => {
     });
     const r = await as(a, A.tech, (tx) => recordMeasurement(tx, A.tech, settings, { clientId: randomUUID(), assetId: id, instrumentId, instrumentNotRequired: false, input: { kind: "numeric", value: "5e6" }, signatureConfirmed: false, fromOffline: false, createNc: false }));
     expect(r.result).toBe("review");
+    // Sin criterio no hay valores evaluados, pero el dato introducido se conserva
+    const [m] = await as(a, A.admin, (tx) => tx`select raw_input from measurements where id = ${r.id}`);
+    expect(m.raw_input).toEqual({ kind: "numeric", value: "5e6" });
+  });
+
+  it("la cola offline no envía mediciones guardadas por otro usuario", async () => {
+    await expect(
+      as(a, A.tech, (tx) => recordMeasurement(tx, A.tech, settings, { clientId: randomUUID(), assetId, instrumentId, instrumentNotRequired: false, input: { kind: "numeric", value: "3e6" }, signatureConfirmed: false, fromOffline: true, createNc: false, queuedBy: { userId: A.viewer.userId, orgId: A.orgId } })),
+    ).rejects.toMatchObject({ status: 409 });
   });
 
   it("si el criterio cambió entre pantalla y guardado → revisión", async () => {
@@ -283,6 +292,33 @@ d("Endurecimiento tras revisión (0006)", () => {
   it("cambiar contraseña exige un actor autenticado", async () => {
     await expect(a`select app_auth_set_password(${A.tech.userId}, 'x')`).rejects.toThrow(/sin usuario autenticado/);
     await expect(a`select app_session_revoke_user(${A.tech.userId})`).rejects.toThrow(/sin usuario autenticado/);
+  });
+
+  it("un administrador no cambia la contraseña de una cuenta compartida con otra organización", async () => {
+    const [role] = await o`select id from roles where org_id = ${B.orgId} and key = 'viewer'`;
+    await o`insert into memberships(org_id, user_id, role_id) values (${B.orgId}, ${A.tech.userId}, ${role.id})`;
+    try {
+      await expect(as(a, A.admin, (tx) => tx`select app_auth_set_password(${A.tech.userId}, 'x')`)).rejects.toThrow(/otra organización/);
+    } finally {
+      await o`delete from memberships where org_id = ${B.orgId} and user_id = ${A.tech.userId}`;
+    }
+  });
+
+  it("revocar sesiones de otro usuario solo afecta a la organización actual", async () => {
+    const [role] = await o`select id from roles where org_id = ${B.orgId} and key = 'viewer'`;
+    await o`insert into memberships(org_id, user_id, role_id) values (${B.orgId}, ${A.viewer.userId}, ${role.id})`;
+    const ids = await o`insert into sessions(user_id, org_id, token_hash, expires_at) values
+      (${A.viewer.userId}, ${A.orgId}, ${Buffer.from(randomUUID())}, now() + interval '1 day'),
+      (${A.viewer.userId}, ${B.orgId}, ${Buffer.from(randomUUID())}, now() + interval '1 day') returning id, org_id`;
+    try {
+      await as(a, A.admin, (tx) => tx`select app_session_revoke_user(${A.viewer.userId})`);
+      const rows = await o`select org_id, revoked_at from sessions where id in ${o(ids.map((r) => r.id))}`;
+      expect(rows.find((r) => r.org_id === A.orgId)?.revoked_at).toBeTruthy();
+      expect(rows.find((r) => r.org_id === B.orgId)?.revoked_at).toBeNull();
+    } finally {
+      await o`delete from sessions where id in ${o(ids.map((r) => r.id))}`;
+      await o`delete from memberships where org_id = ${B.orgId} and user_id = ${A.viewer.userId}`;
+    }
   });
 
   it("la app no puede leer password_hash ni ejecutar funciones internas", async () => {

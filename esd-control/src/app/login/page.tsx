@@ -6,17 +6,20 @@ import { Zap } from "lucide-react";
 export const metadata = { title: "Iniciar sesión" };
 
 /** Solo rutas internas: rechaza //host, /\host y cualquier destino que resuelva a otro origen. */
-function safeRedirect(next: string | undefined): string {
+function safeRedirect(nextParam: string | string[] | undefined): string {
+  const next = Array.isArray(nextParam) ? undefined : nextParam;
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\") || /[\u0000-\u001f]/.test(next)) return "/";
   try {
     const u = new URL(next, "http://interno.invalid");
-    return u.origin === "http://interno.invalid" ? u.pathname + u.search + u.hash : "/";
+    // Tras normalizar (p. ej. /x/..//host) la ruta no puede empezar por // ni contener \
+    if (u.origin !== "http://interno.invalid" || u.pathname.startsWith("//") || u.pathname.includes("\\")) return "/";
+    return u.pathname + u.search + u.hash;
   } catch {
     return "/";
   }
 }
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
   const s = await getSession();
   const { next } = await searchParams;
   const safeNext = safeRedirect(next);

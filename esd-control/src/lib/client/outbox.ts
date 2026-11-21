@@ -103,7 +103,7 @@ export async function syncOutbox(opts: { includeErrored?: boolean } = {}): Promi
         res = await fetch("/api/measurements", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...it.payload, clientId: it.clientId, fromOffline: true }),
+          body: JSON.stringify({ ...it.payload, clientId: it.clientId, fromOffline: true, queuedBy: { userId: it.userId, orgId: it.orgId } }),
         });
       } catch {
         return { sent, failed, offline: true };

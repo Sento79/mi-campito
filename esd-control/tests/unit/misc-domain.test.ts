@@ -211,4 +211,16 @@ describe("correcciones tras revisión (escáner, ZPL, fechas)", () => {
     expect(z).toContain("_7EJA");
     expect(z).toMatch(/\^FH\^FD_7EJA_5F1/);
   });
+  it("Code 128 ZPL: '>' se imprime literal (><)", () => {
+    const z = toZpl({ code: "X", name: "X", scanCode: "A>B", url: "https://e/a/X", category: null, location: null }, 100, 50, labelLayoutSchema.parse({ code: "barcode" }));
+    expect(z).toContain("^FDA><B^FS");
+  });
+  it("importación: un ID no puede coincidir con el código de escaneo de una fila anterior", () => {
+    const p = validateImport(
+      [["codigo", "nombre", "categoria", "codigo_escaneo"], ["A-1", "Uno", "TAP", "B-2"], ["B-2", "Dos", "TAP", ""]],
+      { categoryCodes: new Set(["TAP"]), locationCodes: new Set(), existingCodes: new Set(), existingScanCodes: new Set() },
+    );
+    expect(p.valid.map((v) => v.code)).toEqual(["A-1"]);
+    expect(p.issues[0]).toMatchObject({ row: 3, field: "codigo" });
+  });
 });

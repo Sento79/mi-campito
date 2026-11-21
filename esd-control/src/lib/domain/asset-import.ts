@@ -118,7 +118,8 @@ export interface ImportLookups {
   categoryCodes: Set<string>;
   locationCodes: Set<string>;
   /** Códigos que existen en varias variantes de mayúsculas (no se pueden resolver) */
-  ambiguousCodes?: Set<string>;
+  ambiguousCategoryCodes?: Set<string>;
+  ambiguousLocationCodes?: Set<string>;
   /** IDs y códigos de escaneo existentes (en MAYÚSCULAS) */
   existingCodes: Set<string>;
   existingScanCodes: Set<string>;
@@ -161,8 +162,8 @@ export function validateImport(rows: string[][], lookups: ImportLookups): Import
     const scan = d.scan_code ?? d.code;
     const scanKey = scan.toUpperCase();
     let ok = true;
-    if (seenCodes.has(codeKey)) {
-      issues.push({ row: rowNo, field: "codigo", message: `ID duplicado en el archivo (también en fila ${seenCodes.get(codeKey)})` });
+    if (seenCodes.has(codeKey) || seenScan.has(codeKey)) {
+      issues.push({ row: rowNo, field: "codigo", message: `ID duplicado en el archivo (también en fila ${seenCodes.get(codeKey) ?? seenScan.get(codeKey)})` });
       ok = false;
     }
     if (lookups.existingCodes.has(codeKey)) {
@@ -177,14 +178,14 @@ export function validateImport(rows: string[][], lookups: ImportLookups): Import
       issues.push({ row: rowNo, field: "codigo_escaneo", message: `El código de escaneo ${scan} ya está asignado` });
       ok = false;
     }
-    if (lookups.ambiguousCodes?.has(d.category_code.toUpperCase())) {
+    if (lookups.ambiguousCategoryCodes?.has(d.category_code.toUpperCase())) {
       issues.push({ row: rowNo, field: "categoria", message: `Categoría "${d.category_code}" ambigua (existen códigos que solo difieren en mayúsculas)` });
       ok = false;
     } else if (!lookups.categoryCodes.has(d.category_code.toUpperCase())) {
       issues.push({ row: rowNo, field: "categoria", message: `Categoría "${d.category_code}" no existe` });
       ok = false;
     }
-    if (d.location_code && lookups.ambiguousCodes?.has(d.location_code.toUpperCase())) {
+    if (d.location_code && lookups.ambiguousLocationCodes?.has(d.location_code.toUpperCase())) {
       issues.push({ row: rowNo, field: "ubicacion", message: `Ubicación "${d.location_code}" ambigua (existen códigos que solo difieren en mayúsculas)` });
       ok = false;
     } else if (d.location_code && !lookups.locationCodes.has(d.location_code.toUpperCase())) {

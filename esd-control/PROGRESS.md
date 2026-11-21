@@ -58,3 +58,17 @@ npm run test:e2e              # 9 tests OK (ejecutado varias veces)
 
 Node 22, PostgreSQL 16 local (bases `esd`, `esd_test`, `esd_e2e`, propietario `esd_owner`),
 Chromium de Playwright 1.63. No se ha verificado contra Supabase ni otros servicios externos.
+
+## Revisión PR #1 — ronda 2 (migración 0007)
+
+- Funciones nuevas no ejecutables por PUBLIC por defecto; `grants.sql` es obligatorio en cada migración.
+- Contraseñas de cuentas compartidas entre organizaciones: solo las cambia su titular. Revocar sesiones de otro usuario afecta solo a la organización actual.
+- Comprobación de organización también en actualizaciones de tablas de enlace; `role_permissions` sin UPDATE.
+- Resúmenes con `FOR NO KEY UPDATE` (sin interbloqueos con FK); punto de tipo activo solo con mediciones directas; recálculo al cambiar el activo o tipo del punto.
+- Se guarda la entrada original (`measurements.raw_input`) aunque no haya criterio vigente.
+- Cola offline: el servidor rechaza (409) mediciones guardadas por otro usuario/organización.
+- Medición rápida: el reintento tras un resultado incierto reutiliza el `clientId`; la carga del siguiente elemento de ruta no pisa búsquedas posteriores.
+- `next` de login: rechaza arrays y rutas que normalizan a `//host`.
+- Altas/ediciones/importación de activos serializadas por organización; importación detecta ID igual a un código de escaneo anterior; ambigüedad de categoría y ubicación por separado.
+- ZPL Code 128 con `>` literal.
+- Verificado: lint, typecheck, 150 tests Vitest, build y 9 E2E.

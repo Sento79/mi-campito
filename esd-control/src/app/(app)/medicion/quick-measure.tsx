@@ -30,6 +30,9 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
   const scannerDefaults = React.useMemo(() => ({ ...settings.scanner, idleTimeoutMs: 80 }) as ScannerConfig, [settings.scanner]);
   const [cfg, setCfg] = useScannerConfig(scannerDefaults);
   const lookupSeq = React.useRef(0);
+  // Un envío cuyo resultado es incierto (red caída, error 5xx) conserva su clientId: si el servidor
+  // llegó a registrarlo, el reintento con los mismos datos se reconoce como duplicado.
+  const pendingSend = React.useRef<{ key: string; clientId: string; measuredAtLocal: string } | null>(null);
   const [target, setTarget] = React.useState<TargetDTO | null>(null);
   const [fromCache, setFromCache] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -154,9 +157,13 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
 
   const loadNext = React.useCallback(
     async (campaign: string, after?: number) => {
+      // Comparte secuencia con lookup: una respuesta tardía no sustituye a una búsqueda posterior
+      const seq = ++lookupSeq.current;
+      const current = () => seq === lookupSeq.current;
       setLoading(true);
       try {
         const r = await nextCampaignItemAction({ campaignId: campaign, afterItemOrder: after });
+        if (!current()) return;
         if (!r.ok) {
           toast({ tone: "bad", title: r.error });
           return;
@@ -170,9 +177,9 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
         setRouteInfo({ route: r.data.route, total: r.data.total, completed: r.data.completed, remaining: r.data.remaining });
         applyTarget(r.data.target);
       } catch {
-        toast({ tone: "bad", title: "Sin conexión", body: "No se pudo cargar el siguiente elemento de la ruta." });
+        if (current()) toast({ tone: "bad", title: "Sin conexión", body: "No se pudo cargar el siguiente elemento de la ruta." });
       } finally {
-        setLoading(false);
+        if (current()) setLoading(false);
       }
     },
     [applyTarget, toast],
@@ -259,9 +266,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
     }
     savingRef.current = true;
     setSaving(true);
-    const clientId = crypto.randomUUID();
-    const payload = {
-      clientId,
+    const base = {
       assetId: target.assetId,
       planPointId: target.pointId,
       campaignId: campaignId || null,
@@ -269,7 +274,6 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
       instrumentNotRequired: mode === "measure" && notRequired,
       input,
       comment: comment.trim() || undefined,
-      measuredAtLocal: new Date().toISOString(),
       deviceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       repeatsMeasurementId: repeat?.id ?? null,
       repeatReason: repeat?.reason,
@@ -277,6 +281,12 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
       expectedCriterionVersionId: target.criterion?.id ?? null,
       createNc: canCreateNc && createNc,
     };
+    const key = JSON.stringify(base);
+    const prevSend = pendingSend.current?.key === key ? pendingSend.current : null;
+    const clientId = prevSend?.clientId ?? crypto.randomUUID();
+    const measuredAtLocal = prevSend?.measuredAtLocal ?? new Date().toISOString();
+    pendingSend.current = { key, clientId, measuredAtLocal };
+    const payload = { ...base, clientId, measuredAtLocal };
     const label = `${target.code} · ${target.name}`;
     try {
       let res: Response;
@@ -289,6 +299,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
           return;
         }
         await enqueue({ clientId, orgId, userId, payload, label, provisionalResult: preview?.result ?? null });
+        pendingSend.current = null;
         setSaved({ result: (preview?.result ?? "pending") as Result, reasons: preview?.reasons ?? [], ncCode: null, ncId: null, id: null, offline: true, label, warnings: [] });
         toast({ tone: "warn", title: "Guardada en este dispositivo", body: "Sin conexión. Se enviará automáticamente al recuperar la red. NO está registrada todavía en el servidor." });
         if (draftKey) localStorage.removeItem(draftKey);
@@ -301,9 +312,12 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
         return;
       }
       if (!res.ok) {
+        // Rechazo definitivo (4xx): el siguiente intento es una medición nueva. Con 5xx se conserva el clientId.
+        if (res.status < 500) pendingSend.current = null;
         toast({ tone: "bad", title: body.error ?? "No se pudo guardar", body: body.issues?.join("\n") });
         return;
       }
+      pendingSend.current = null;
       if (photo && body.id) {
         const fd = new FormData();
         fd.set("file", photo);

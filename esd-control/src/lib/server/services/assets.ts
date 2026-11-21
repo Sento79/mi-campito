@@ -73,7 +73,13 @@ function toRow(i: AssetInput) {
   };
 }
 
+async function lockIdentifiers(tx: Tx) {
+  // Sin restricción que compare code con scan_code: se serializan las altas/ediciones de la organización
+  await tx`select pg_advisory_xact_lock(hashtext('asset-ids:' || app_current_org()::text))`;
+}
+
 async function assertUnique(tx: Tx, code: string, scan: string, exceptId?: string) {
+  await lockIdentifiers(tx);
   // Espacio de nombres único: ni el ID ni el código de escaneo pueden coincidir con el ID o
   // el código de escaneo de OTRO activo (la búsqueda por escaneo acepta ambos).
   const [dup] = await tx`select code, scan_code from assets
@@ -149,7 +155,8 @@ export async function previewImport(tx: Tx, rows: string[][]): Promise<ImportPre
   return validateImport(rows, {
     categoryCodes: c.ok,
     locationCodes: l.ok,
-    ambiguousCodes: new Set([...c.ambiguous, ...l.ambiguous]),
+    ambiguousCategoryCodes: c.ambiguous,
+    ambiguousLocationCodes: l.ambiguous,
     existingCodes: new Set(codes.flatMap((x) => [x.code, x.scan_code])),
     existingScanCodes: new Set(codes.flatMap((x) => [x.code, x.scan_code])),
   });
@@ -160,6 +167,7 @@ export async function previewImport(tx: Tx, rows: string[][]): Promise<ImportPre
  * colisión concurrente), no se importa ninguna.
  */
 export async function commitImport(tx: Tx, ctx: Ctx, rows: string[][], fileName: string) {
+  await lockIdentifiers(tx);
   const preview = await previewImport(tx, rows);
   if (preview.issues.length) throw new AppError(`El archivo tiene ${preview.issues.length} error(es). Corríjalos antes de importar.`, 422);
   if (preview.valid.length === 0) throw new AppError("No hay filas válidas que importar", 422);

@@ -10,6 +10,7 @@ revoke insert, update on permissions from esd_app;
 revoke all on users from esd_app;
 grant select (id, email, full_name, is_active, failed_logins, locked_until, last_login_at, password_changed_at, created_at, updated_at) on users to esd_app;
 grant update (full_name, is_active) on users to esd_app;
+revoke update on role_permissions from esd_app;
 grant delete on measurements, measurement_values, role_permissions, campaign_technicians, campaign_categories,
   campaign_items, notifications, point_template_items, roles, label_templates, criterion_versions to esd_app;
 grant usage, select on all sequences in schema public to esd_app;

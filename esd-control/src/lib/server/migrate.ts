@@ -14,10 +14,13 @@ export const APP_ROLE = "esd_app";
 export async function runMigrations(opts: { ownerUrl: string; appPassword: string; dir?: string; log?: (m: string) => void; rotateAppPassword?: boolean }) {
   const log = opts.log ?? (() => {});
   const dir = opts.dir ?? path.join(process.cwd(), "db", "migrations");
-  const sql = postgres(opts.ownerUrl, { max: 1, onnotice: () => {} });
+  // max_lifetime null: el bloqueo consultivo de sesión debe vivir en una única conexión
+  const sql = postgres(opts.ownerUrl, { max: 1, max_lifetime: null, onnotice: () => {} });
   try {
     // Un único ejecutor a la vez (bloqueo de sesión, en la única conexión de este cliente)
     await sql`select pg_advisory_lock(hashtext('esd-control:migrations'))`;
+    // Antes de crear funciones: que no sean ejecutables por PUBLIC aunque una migración falle a medias
+    await sql`alter default privileges in schema public revoke execute on functions from public`;
     await sql`create table if not exists schema_migrations (version text primary key, checksum text not null, applied_at timestamptz not null default now())`;
 
     if (!/^[\x20-\x7e]{8,128}$/.test(opts.appPassword) || opts.appPassword.includes("'")) {
@@ -59,8 +62,8 @@ export async function runMigrations(opts: { ownerUrl: string; appPassword: strin
       count++;
     }
     // Permisos idempotentes (también repara una base restaurada desde otra instalación)
-    const grants = await readFile(path.join(dir, "..", "grants.sql"), "utf8").catch(() => null);
-    if (grants) await sql.unsafe(grants);
+    const grants = await readFile(path.join(dir, "..", "grants.sql"), "utf8"); // obligatorio: si falta, error
+    await sql.unsafe(grants);
     log(count ? `${count} migración(es) aplicada(s)` : "Base de datos al día");
     return count;
   } finally {

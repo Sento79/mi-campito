@@ -146,6 +146,8 @@ export const recordMeasurementSchema = z.object({
   /** Versión de criterio mostrada al técnico (detecta cambios entre pantalla y guardado) */
   expectedCriterionVersionId: z.string().uuid().nullish(),
   createNc: z.boolean().default(false),
+  /** Cola offline: usuario y organización con los que se guardó; deben coincidir con la sesión */
+  queuedBy: z.object({ userId: z.string().uuid(), orgId: z.string().uuid() }).optional(),
 });
 export type RecordMeasurementInput = z.infer<typeof recordMeasurementSchema>;
 
@@ -166,6 +168,9 @@ function instrumentValidity(inst: DbRow | null, today: string) {
 }
 
 export async function recordMeasurement(tx: Tx, ctx: Ctx, settings: OrgSettings, input: RecordMeasurementInput): Promise<RecordResult> {
+  if (input.queuedBy && (input.queuedBy.userId !== ctx.userId || input.queuedBy.orgId !== ctx.orgId)) {
+    throw new AppError("La medición se guardó en el dispositivo con otro usuario u organización; inicie sesión con esa cuenta para enviarla", 409);
+  }
   // Idempotencia: la cola offline puede reenviar la misma medición
   const [dup] = await tx`select id, result, result_explanation from measurements where org_id = ${ctx.orgId} and client_id = ${input.clientId}`;
   if (dup) {
@@ -253,14 +258,14 @@ export async function recordMeasurement(tx: Tx, ctx: Ctx, settings: OrgSettings,
     insert into measurements(org_id, client_id, status, asset_id, plan_point_id, category_id, campaign_id, campaign_item_id,
       instrument_id, instrument_not_required, instrument_snapshot, procedure_id, procedure_revision, criterion_version_id, rules_snapshot,
       method, result, result_explanation, not_measurable_reason, comment, measured_by, measured_at_local, device_timezone,
-      synced_from_offline, attempt_number, repeats_measurement_id, signature_confirmed)
+      synced_from_offline, attempt_number, repeats_measurement_id, signature_confirmed, raw_input)
     values (${ctx.orgId}, ${input.clientId}, 'final', ${target.asset?.id ?? null}, ${target.point?.id ?? null}, ${target.category?.id ?? null},
       ${input.campaignId ?? null}, ${campaignItemId}, ${instrument?.id ?? null}, ${input.instrumentNotRequired},
       ${instrumentSnapshot ? tx.json(instrumentSnapshot as never) : null}, ${target.procedure?.id ?? null}, ${target.procedure?.revision ?? target.criterion?.procedure_revision ?? null},
       ${target.criterion?.id ?? null}, ${target.rules ? tx.json(target.rules as never) : null}, ${method}, ${evaluation.result},
       ${tx.json(evaluation.reasons as never)}, ${reasonsForNm}, ${comment}, ${ctx.userId},
       ${input.measuredAtLocal ? new Date(input.measuredAtLocal) : null}, ${input.deviceTimezone ?? null}, ${input.fromOffline},
-      ${attempt}, ${input.repeatsMeasurementId ?? null}, ${input.signatureConfirmed})
+      ${attempt}, ${input.repeatsMeasurementId ?? null}, ${input.signatureConfirmed}, ${tx.json(input.input as never)})
     returning id, recorded_at`;
 
   let i = 0;
