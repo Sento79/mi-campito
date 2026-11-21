@@ -198,3 +198,17 @@ describe("matriz de imagen coherente con los marcadores", () => {
     }
   });
 });
+
+describe("correcciones tras revisión (escáner, ZPL, fechas)", () => {
+  it("no confunde un código con '/a/' con un enlace de la app", () => {
+    expect(normalizeScanValue("RACK/a/ABC")).toBe("RACK/a/ABC");
+    expect(normalizeScanValue("https://esd.example.com/a/ASSET(1)")).toBe("ASSET(1)");
+    expect(normalizeScanValue("/a/TAP%2F7")).toBe("TAP/7");
+  });
+  it("el QR y el código de barras ZPL escapan caracteres de control", () => {
+    const z = toZpl({ code: "X", name: "X", scanCode: "~JA_1", url: "https://e/a/~JA", category: null, location: null }, 100, 50, labelLayoutSchema.parse({ code: "both" }));
+    expect(z).not.toMatch(/\^FDLA,https:\/\/e\/a\/~JA/);
+    expect(z).toContain("_7EJA");
+    expect(z).toMatch(/\^FH\^FD_7EJA_5F1/);
+  });
+});

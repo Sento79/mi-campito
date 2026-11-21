@@ -26,6 +26,8 @@ export async function parseSheet(fileName: string, data: Buffer): Promise<string
     let text = data.toString("utf8");
     if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
     const r = Papa.parse<string[]>(text, { skipEmptyLines: "greedy", delimitersToGuess: [",", ";", "\t"] });
+    const fatal = r.errors.find((e) => e.type === "Quotes" || e.code === "MissingQuotes" || e.code === "InvalidQuotes");
+    if (fatal) throw new AppError(`CSV mal formado (comillas) cerca de la fila ${(fatal.row ?? 0) + 1}: ${fatal.message}`);
     if (r.data.length > 5001) throw new AppError("Máximo 5000 filas");
     return r.data.map((row) => row.map((c) => String(c ?? "")));
   }

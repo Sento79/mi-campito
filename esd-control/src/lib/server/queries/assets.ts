@@ -2,6 +2,7 @@ import "server-only";
 import type { Tx } from "../db";
 import { dateOrUndef, likePattern, str, uuidOrUndef } from "./common";
 import { ASSET_STATUSES } from "@/lib/domain/asset-import";
+import { AppError } from "../errors";
 
 export type SP = Record<string, string | string[] | undefined>;
 
@@ -16,7 +17,9 @@ export function assetWhere(tx: Tx, sp: SP, leadDays: number) {
   const archived = str(sp.archived) === "1";
   const from = dateOrUndef(sp.from);
   const to = dateOrUndef(sp.to);
-  const ids = str(sp.ids)?.split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  const rawIds = Array.isArray(sp.ids) ? sp.ids.join(",") : sp.ids;
+  const ids = rawIds ? rawIds.split(",").map((x) => x.trim()).filter((x) => /^[0-9a-f-]{36}$/i.test(x)) : undefined;
+  if (ids && ids.length > 5000) throw new AppError("Demasiados activos seleccionados (máx. 5000)", 400);
   return tx`
     ${archived ? tx`a.archived_at is not null` : tx`a.archived_at is null`}
     ${ids?.length ? tx`and a.id = any(${ids})` : tx``}

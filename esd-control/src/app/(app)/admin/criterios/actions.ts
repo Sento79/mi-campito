@@ -23,6 +23,8 @@ export const createVersionAction = defineAction(
   async (i, { tx, session }) => {
     const rules = criterionRulesSchema.safeParse(i.rules);
     if (!rules.success) throw new AppError("Reglas no válidas: " + rules.error.issues.map((x) => `${x.path.join(".")} ${x.message}`).slice(0, 3).join("; "), 422);
+    const [parent] = await tx`select id from criteria where id = ${i.criterionId} and is_active for update`;
+    if (!parent) throw new AppError("Criterio no encontrado o retirado", 404);
     const [{ v }] = await tx`select coalesce(max(version), 0) + 1 as v from criterion_versions where criterion_id = ${i.criterionId}`;
     const [proc] = i.procedureId ? await tx`select revision from procedures where id = ${i.procedureId}` : [null];
     const unit = rules.data.kind === "numeric" ? rules.data.unit : rules.data.kind === "multipoint" ? rules.data.point.unit : null;

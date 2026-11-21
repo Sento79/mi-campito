@@ -6,6 +6,7 @@ import { Alert, Button, Card, CardHeader, Checkbox, Field, Input, ResultBadge, S
 import { useAction } from "@/components/ui/client";
 import { criterionRulesSchema, describeRules, evaluate, type CriterionRules, type NumericRule } from "@/lib/domain/criteria";
 import { UNITS, compatibleUnits } from "@/lib/domain/units";
+import { nextFreeId } from "@/lib/domain/ids";
 import { activateVersionAction, createVersionAction, discardDraftAction } from "../actions";
 
 const defaults: Record<CriterionRules["kind"], CriterionRules> = {
@@ -96,7 +97,7 @@ export function RulesEditor({ criterionId, procedures, initial }: { criterionId:
                     <Button variant="ghost" icon={Trash2} aria-label="Quitar" onClick={() => setRules({ ...rules, options: rules.options.filter((_, k) => k !== i) })} />
                   </div>
                 ))}
-                <Button size="sm" variant="outline" icon={Plus} onClick={() => setRules({ ...rules, options: [...rules.options, { value: `op${rules.options.length + 1}`, label: "", outcome: "pass" }] })}>Añadir opción</Button>
+                <Button size="sm" variant="outline" icon={Plus} onClick={() => setRules({ ...rules, options: [...rules.options, { value: nextFreeId("op", rules.options.map((o) => o.value)), label: "", outcome: "pass" }] })}>Añadir opción</Button>
               </div>
             ) : null}
             {rules.kind === "checklist" ? (
@@ -110,7 +111,7 @@ export function RulesEditor({ criterionId, procedures, initial }: { criterionId:
                     <Button variant="ghost" icon={Trash2} aria-label="Quitar" onClick={() => setRules({ ...rules, items: rules.items.filter((_, k) => k !== i) })} />
                   </div>
                 ))}
-                <Button size="sm" variant="outline" icon={Plus} onClick={() => setRules({ ...rules, items: [...rules.items, { code: `c${rules.items.length + 1}`, label: "", required: true, allowNA: false }] })}>Añadir elemento</Button>
+                <Button size="sm" variant="outline" icon={Plus} onClick={() => setRules({ ...rules, items: [...rules.items, { code: nextFreeId("c", rules.items.map((o) => o.code)), label: "", required: true, allowNA: false }] })}>Añadir elemento</Button>
               </div>
             ) : null}
             {rules.kind === "combined" ? <p className="text-sm text-muted">Las reglas combinadas se editan en JSON.</p> : null}
@@ -120,7 +121,13 @@ export function RulesEditor({ criterionId, procedures, initial }: { criterionId:
           <div className="space-y-2">
             <Textarea aria-label="Reglas en JSON" rows={14} className="font-mono text-xs" value={json} onChange={(e) => setJson(e.target.value)} />
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => { try { setRules(JSON.parse(json)); setJson(null); } catch { alert("JSON no válido"); } }}>Aplicar JSON</Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                let parsedJson: unknown;
+                try { parsedJson = JSON.parse(json); } catch { alert("JSON no válido"); return; }
+                const v = criterionRulesSchema.safeParse(parsedJson);
+                if (!v.success) { alert("Reglas no válidas: " + v.error.issues.slice(0, 3).map((i) => `${i.path.join(".")} ${i.message}`).join("; ")); return; }
+                setRules(v.data); setJson(null);
+              }}>Aplicar JSON</Button>
               <Button size="sm" variant="ghost" onClick={() => setJson(null)}>Volver al formulario</Button>
             </div>
           </div>

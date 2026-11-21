@@ -11,11 +11,13 @@ export const APP_ROLE = "esd_app";
  * - Se guarda la suma SHA-256: si una migración ya aplicada cambia, se aborta.
  * - Crea/actualiza el rol de aplicación esd_app (LOGIN, sin BYPASSRLS).
  */
-export async function runMigrations(opts: { ownerUrl: string; appPassword: string; dir?: string; log?: (m: string) => void }) {
+export async function runMigrations(opts: { ownerUrl: string; appPassword: string; dir?: string; log?: (m: string) => void; rotateAppPassword?: boolean }) {
   const log = opts.log ?? (() => {});
   const dir = opts.dir ?? path.join(process.cwd(), "db", "migrations");
   const sql = postgres(opts.ownerUrl, { max: 1, onnotice: () => {} });
   try {
+    // Un único ejecutor a la vez (bloqueo de sesión, en la única conexión de este cliente)
+    await sql`select pg_advisory_lock(hashtext('esd-control:migrations'))`;
     await sql`create table if not exists schema_migrations (version text primary key, checksum text not null, applied_at timestamptz not null default now())`;
 
     if (!/^[\x20-\x7e]{8,128}$/.test(opts.appPassword) || opts.appPassword.includes("'")) {
@@ -25,8 +27,10 @@ export async function runMigrations(opts: { ownerUrl: string; appPassword: strin
     if (!role) {
       await sql.unsafe(`create role ${APP_ROLE} login password '${opts.appPassword}' nosuperuser nocreatedb nocreaterole nobypassrls`);
       log(`Rol ${APP_ROLE} creado`);
-    } else {
+    } else if (opts.rotateAppPassword) {
+      // Solo con rotación explícita: el rol es global al clúster y puede compartirlo otra base de datos
       await sql.unsafe(`alter role ${APP_ROLE} with login password '${opts.appPassword}'`);
+      log(`Contraseña de ${APP_ROLE} actualizada: actualice DATABASE_URL y reinicie la aplicación`);
     }
     const [attrs] = await sql`select rolsuper, rolbypassrls from pg_roles where rolname = ${APP_ROLE}`;
     if (attrs.rolsuper || attrs.rolbypassrls) {
@@ -54,9 +58,13 @@ export async function runMigrations(opts: { ownerUrl: string; appPassword: strin
       log(`Aplicada ${f}`);
       count++;
     }
+    // Permisos idempotentes (también repara una base restaurada desde otra instalación)
+    const grants = await readFile(path.join(dir, "..", "grants.sql"), "utf8").catch(() => null);
+    if (grants) await sql.unsafe(grants);
     log(count ? `${count} migración(es) aplicada(s)` : "Base de datos al día");
     return count;
   } finally {
+    await sql`select pg_advisory_unlock(hashtext('esd-control:migrations'))`.catch(() => {});
     await sql.end();
   }
 }

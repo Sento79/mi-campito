@@ -10,6 +10,9 @@ export function imageSize(buf: Buffer): { width: number; height: number } | null
         i++;
         continue;
       }
+      // Saltar bytes de relleno 0xFF antes del marcador
+      while (i + 1 < buf.length && buf[i + 1] === 0xff) i++;
+      if (i + 9 >= buf.length) break;
       const marker = buf[i + 1];
       const len = buf.readUInt16BE(i + 2);
       // SOF0..SOF15 salvo DHT(C4), JPG(C8), DAC(CC)

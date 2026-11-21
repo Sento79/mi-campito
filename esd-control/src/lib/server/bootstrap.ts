@@ -34,6 +34,8 @@ export async function hashPassword(pw: string): Promise<string> {
 export function validatePasswordStrength(pw: string): string | null {
   if (pw.length < 10) return "La contraseña debe tener al menos 10 caracteres";
   if (pw.length > 128) return "La contraseña es demasiado larga";
+  // bcrypt solo usa los primeros 72 bytes: más allá, dos contraseñas distintas serían equivalentes
+  if (Buffer.byteLength(pw, "utf8") > 72) return "La contraseña no puede superar 72 bytes (unos 72 caracteres sin acentos)";
   const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
   if (classes < 3) return "Use al menos tres de: minúsculas, mayúsculas, números y símbolos";
   return null;

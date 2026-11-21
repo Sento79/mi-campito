@@ -62,6 +62,9 @@ export async function loadTarget(tx: Tx, ref: { assetId?: string | null; planPoi
     if (!point) throw new NotFoundError("Punto de plano no encontrado");
     if (point.archived_at) throw new AppError("El punto está archivado y no admite mediciones");
     if (point.point_type === "reference") throw new AppError("Los puntos de referencia no se miden");
+    if (point.asset_id && assetId && assetId !== point.asset_id) {
+      throw new AppError("El activo indicado no corresponde al punto del plano", 422);
+    }
     if (point.asset_id) assetId = assetId ?? point.asset_id;
   }
   let asset: DbRow | null = null;
@@ -231,7 +234,9 @@ export async function recordMeasurement(tx: Tx, ctx: Ctx, settings: OrgSettings,
   if (input.repeatsMeasurementId) {
     const [prev] = await tx`select id, attempt_number, asset_id, plan_point_id from measurements where id = ${input.repeatsMeasurementId}`;
     if (!prev) throw new NotFoundError("Medición repetida no encontrada");
-    if ((prev.asset_id ?? null) !== (target.asset?.id ?? null) && (prev.plan_point_id ?? null) !== (target.point?.id ?? null)) {
+    const sameAsset = !!prev.asset_id && prev.asset_id === (target.asset?.id ?? null);
+    const samePoint = !!prev.plan_point_id && prev.plan_point_id === (target.point?.id ?? null);
+    if (!sameAsset && !samePoint) {
       throw new AppError("La repetición debe corresponder al mismo activo o punto");
     }
     attempt = prev.attempt_number + 1;

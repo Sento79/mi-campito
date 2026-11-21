@@ -73,7 +73,8 @@ export function PlanViewer({
   const [formFor, setFormFor] = React.useState<{ id?: string; x?: number; y?: number } | null>(null);
   const [archiveFor, setArchiveFor] = React.useState<PlanPoint | null>(null);
   const [override, setOverride] = React.useState<{ message: string; retry: (reason: string) => Promise<void> } | null>(null);
-  const drag = React.useRef<{ kind: "pan" | "point"; id?: string; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
+  // hit: punto bajo el cursor al pulsar (con captura de puntero, pointerup llega al contenedor)
+  const drag = React.useRef<{ kind: "pan" | "point"; id?: string; hit?: string; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null);
   const pinch = React.useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchDist = React.useRef<number | null>(null);
   const moveAct = useAction(movePointAction);
@@ -151,9 +152,9 @@ export function PlanViewer({
     const target = (e.target as HTMLElement).closest("[data-point]") as HTMLElement | null;
     const p = local(e);
     if (target && mode === "move" && editable && canEdit) {
-      drag.current = { kind: "point", id: target.dataset.point, sx: p.x, sy: p.y, ox: 0, oy: 0, moved: false };
+      drag.current = { kind: "point", id: target.dataset.point, hit: target.dataset.point, sx: p.x, sy: p.y, ox: 0, oy: 0, moved: false };
     } else {
-      drag.current = { kind: "pan", sx: p.x, sy: p.y, ox: vp.offsetX, oy: vp.offsetY, moved: false };
+      drag.current = { kind: "pan", hit: target?.dataset.point, sx: p.x, sy: p.y, ox: vp.offsetX, oy: vp.offsetY, moved: false };
     }
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -183,7 +184,6 @@ export function PlanViewer({
     drag.current = null;
     if (!dr || !vp) return;
     const p = local(e);
-    const target = (e.target as HTMLElement).closest("[data-point]") as HTMLElement | null;
     if (dr.kind === "point" && dr.id) {
       if (!dr.moved) { setSelected(dr.id); return; }
       const pt = points.find((x) => x.id === dr.id)!;
@@ -193,8 +193,8 @@ export function PlanViewer({
       return;
     }
     if (dr.moved) return;
-    if (target) {
-      const id = target.dataset.point!;
+    if (dr.hit) {
+      const id = dr.hit;
       if (mode === "route") setRoute((r) => (r.includes(id) ? r.filter((x) => x !== id) : [...r, id]));
       else setSelected(id);
       return;
@@ -331,7 +331,11 @@ export function PlanViewer({
             <Route className="size-4 text-primary" aria-hidden />Pulse los puntos en el orden en que deben medirse ({route.length} seleccionados).
             <div className="ml-auto flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => setRoute([])}>Vaciar</Button>
-              <Button size="sm" loading={routeAct.pending} onClick={async () => { const r = await routeAct.run({ planId, ids: route }, { success: "Ruta guardada" }); if (r?.ok) { setMode("view"); router.refresh(); } }}>Guardar ruta</Button>
+              <Button size="sm" loading={routeAct.pending} onClick={async () => { // La ruta del plano es única: se conservan los puntos de otras páginas en su orden
+                const byOrder = (a: PlanPoint, b: PlanPoint) => (a.route_order ?? 0) - (b.route_order ?? 0);
+                const before = points.filter((p) => p.page < pageNo && p.route_order).sort(byOrder).map((p) => p.id);
+                const after = points.filter((p) => p.page > pageNo && p.route_order).sort(byOrder).map((p) => p.id);
+                const r = await routeAct.run({ planId, ids: [...before, ...route, ...after] }, { success: "Ruta guardada" }); if (r?.ok) { setMode("view"); router.refresh(); } }}>Guardar ruta</Button>
             </div>
           </div>
         ) : null}

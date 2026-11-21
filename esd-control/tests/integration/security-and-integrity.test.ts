@@ -231,7 +231,8 @@ d("No conformidades y campañas", () => {
 
   it("solo con permiso de cierre se cierra una campaña; cerrada no admite cambios", async () => {
     const cid = await as(a, A.manager, async (tx) => {
-      const [c] = await tx`insert into campaigns(org_id, code, name, starts_on, ends_on, status) values (${A.orgId}, ${"CMP-" + randomUUID().slice(0, 4)}, 'Trimestral', current_date, current_date + 30, 'completed') returning id`;
+      const [c] = await tx`insert into campaigns(org_id, code, name, starts_on, ends_on, status) values (${A.orgId}, ${"CMP-" + randomUUID().slice(0, 4)}, 'Trimestral', current_date, current_date + 30, 'in_progress') returning id`;
+      await tx`update campaigns set status = 'completed' where id = ${c.id}`;
       return c.id as string;
     });
     // Un admin de otra organización no la ve
@@ -259,5 +260,68 @@ d("No conformidades y campañas", () => {
     expect(pt.x).toBe("0.30000000");
     expect(pt.y).toBe("0.50000000");
     expect(pt.plan_id).toBe(planId);
+  });
+});
+
+d("Endurecimiento tras revisión (0006)", () => {
+  it("no se puede referenciar un activo de otra organización en una medición", async () => {
+    const [bCat] = await as(a, B.admin, (tx) => tx`select id from categories where org_id = ${B.orgId} and code = 'TAP'`);
+    const bAsset = await as(a, B.admin, async (tx) => (await tx`insert into assets(org_id, code, scan_code, name, category_id) values (${B.orgId}, 'B-1', 'B-1', 'Ajeno', ${bCat.id}) returning id`)[0].id as string);
+    await expect(
+      as(a, A.tech, (tx) => tx`insert into measurements(org_id, client_id, asset_id, method, result, measured_by) values (${A.orgId}, ${randomUUID()}, ${bAsset}, 'numeric', 'pass', ${A.tech.userId})`),
+    ).rejects.toThrow(/no pertenece a la organización/);
+    await expect(as(a, A.admin, (tx) => tx`insert into nc_links(org_id, nc_id, asset_id) select ${A.orgId}, id, ${bAsset} from nonconformities where org_id = ${A.orgId} limit 1`)).rejects.toThrow(/no pertenece/);
+  });
+
+  it("no se puede crear una versión de criterio sobre un criterio de otra organización", async () => {
+    const bCrit = await as(a, B.manager, async (tx) => (await tx`insert into criteria(org_id, code, name) values (${B.orgId}, 'B-CRIT', 'x') returning id`)[0].id as string);
+    await expect(
+      as(a, A.manager, (tx) => tx`insert into criterion_versions(org_id, criterion_id, version, status, rules, change_reason) values (${A.orgId}, ${bCrit}, 1, 'draft', '{}', 'ataque')`),
+    ).rejects.toThrow(/no pertenece/);
+  });
+
+  it("cambiar contraseña exige un actor autenticado", async () => {
+    await expect(a`select app_auth_set_password(${A.tech.userId}, 'x')`).rejects.toThrow(/sin usuario autenticado/);
+    await expect(a`select app_session_revoke_user(${A.tech.userId})`).rejects.toThrow(/sin usuario autenticado/);
+  });
+
+  it("la app no puede leer password_hash ni ejecutar funciones internas", async () => {
+    await expect(as(a, A.admin, (tx) => tx`select password_hash from users`)).rejects.toThrow(/permission denied/);
+    const ok = await as(a, A.admin, (tx) => tx`select id, email from users where id = ${A.admin.userId}`);
+    expect(ok).toHaveLength(1);
+    await expect(as(a, A.admin, (tx) => tx`select app_refresh_asset_summary(${assetId})`)).rejects.toThrow(/permission denied/);
+  });
+
+  it("no se crean campañas ni NC ya cerradas", async () => {
+    await expect(as(a, A.admin, (tx) => tx`insert into campaigns(org_id, code, name, starts_on, ends_on, status, closed_by, closed_at) values (${A.orgId}, 'CMP-X', 'x', current_date, current_date, 'closed', ${A.admin.userId}, now())`)).rejects.toThrow(/debe crearse/);
+    await expect(as(a, A.admin, (tx) => tx`insert into nonconformities(org_id, code, title, status, verified_by, verified_at, verification_notes, closed_by, closed_at) values (${A.orgId}, 'NC-X', 'x', 'closed', ${A.admin.userId}, now(), 'ok ok', ${A.admin.userId}, now())`)).rejects.toThrow(/debe crearse/);
+  });
+
+  it("una versión publicada no vuelve a borrador", async () => {
+    await expect(as(a, A.manager, (tx) => tx`update criterion_versions set status = 'draft' where org_id = ${A.orgId} and status = 'active'`)).rejects.toThrow(/no puede volver a borrador/);
+  });
+
+  it("no se pueden añadir valores a una medición ya registrada", async () => {
+    const [m] = await as(a, A.admin, (tx) => tx`select id from measurements where org_id = ${A.orgId} and status = 'final' limit 1`);
+    await expect(as(a, A.tech, (tx) => tx`insert into measurement_values(org_id, measurement_id, value_kind, result) values (${A.orgId}, ${m.id}, 'numeric', 'pass')`)).rejects.toThrow(/ya registrada/);
+  });
+
+  it("las ubicaciones no admiten ciclos", async () => {
+    const [x, y] = await as(a, A.admin, async (tx) => {
+      const [p] = await tx`insert into locations(org_id, kind, code, name) values (${A.orgId}, 'zone', 'CYC-X', 'X') returning id`;
+      const [q] = await tx`insert into locations(org_id, parent_id, kind, code, name) values (${A.orgId}, ${p.id}, 'zone', 'CYC-Y', 'Y') returning id`;
+      return [p.id as string, q.id as string];
+    });
+    await expect(as(a, A.admin, (tx) => tx`update locations set parent_id = ${y} where id = ${x}`)).rejects.toThrow(/descendientes/);
+    const sub = await as(a, A.admin, (tx) => tx`select app_location_subtree(${x}) as id`);
+    expect(sub).toHaveLength(2);
+  });
+
+  it("cambiar la periodicidad de la categoría recalcula el vencimiento heredado", async () => {
+    const before = await as(a, A.admin, (tx) => tx`select next_due_at, last_measured_at from assets where id = ${assetId}`);
+    await as(a, A.manager, (tx) => tx`update categories set period_unit = 'year', period_count = 1 where org_id = ${A.orgId} and code = 'TAP'`);
+    const [after] = await as(a, A.admin, (tx) => tx`select next_due_at, last_measured_at, last_result from assets where id = ${assetId}`);
+    if (after.last_result === "pass") expect(new Date(after.next_due_at).getTime()).toBeGreaterThan(new Date(before[0].next_due_at).getTime());
+    else expect(new Date(after.next_due_at).getTime()).toBe(new Date(after.last_measured_at).getTime());
   });
 });

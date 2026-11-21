@@ -9,7 +9,7 @@ Navegador (tablet / PC / móvil)
  │   ├─ Server Actions (defineAction): sesión → permiso → Zod → transacción RLS → auditoría
  │   └─ Rutas /api: exportaciones, PDF, etiquetas, archivos, sincronización offline, cron
  ├─ IndexedDB: cola de mediciones offline + caché de activos consultados
- └─ Service worker: shell de /medicion y estáticos (nunca datos)
+ └─ Service worker: solo estáticos (_next/static); nunca páginas ni datos
 
 PostgreSQL
  ├─ Rol propietario (migraciones/scripts)  ── crea ──►  rol esd_app (LOGIN, sin BYPASSRLS)
@@ -74,6 +74,12 @@ además hay `statement_timeout` e `idle_in_transaction_session_timeout`).
 `criteria` (familia) + `criterion_versions` (borrador → vigente → sustituida/retirada). Las
 versiones publicadas son inmutables (disparador) y solo una puede estar vigente (índice único
 parcial). Publicar registra aprobador, fecha y motivo.
+
+### Referencias entre organizaciones
+Las claves foráneas comprueban existencia pero **no** ven RLS. El disparador genérico
+`app_check_refs('columna:tabla', …)` (migración 0006) exige que toda referencia apunte a una fila de la
+misma organización. Las funciones `SECURITY DEFINER` internas (recálculo de resúmenes) no son ejecutables
+por `esd_app`; `db/grants.sql` define la lista exacta de funciones invocables.
 
 ### Periodicidad
 `app_period_interval` en SQL y `addPeriod` en TS siguen la misma regla (fin de mes recortado).

@@ -8,7 +8,7 @@ import { saveDocument } from "@/lib/server/storage";
 import { orgSettingsSchema } from "@/lib/domain/settings";
 
 export const saveSettingsAction = defineAction({ permission: "settings.manage", schema: orgSettingsSchema }, async (i, { tx, session }) => {
-  const [o] = await tx`select settings from organizations where id = ${session.orgId}`;
+  const [o] = await tx`select settings from organizations where id = ${session.orgId} for update`;
   const next = { ...i, company: { ...i.company, logoDocumentId: o.settings?.company?.logoDocumentId ?? null } };
   const d = diff(o.settings ?? {}, next as Record<string, unknown>);
   await tx`update organizations set settings = ${tx.json(next as never)} where id = ${session.orgId}`;

@@ -26,6 +26,6 @@ export function measurementWhere(tx: Tx, sp: SP) {
     ${user ? tx`and m.measured_by = ${user}` : tx``}
     ${asset ? tx`and m.asset_id = ${asset}` : tx``}
     ${location ? tx`and (a.location_id in (select app_location_subtree(${location})) or pp.location_id in (select app_location_subtree(${location})))` : tx``}
-    ${q ? tx`and (a.code ilike ${likePattern(q)} or a.name ilike ${likePattern(q)} or pp.code ilike ${likePattern(q)})` : tx``}`;
+    ${q ? tx`and (a.code ilike ${likePattern(q)} or a.name ilike ${likePattern(q)} or pp.code ilike ${likePattern(q)} or pp.name ilike ${likePattern(q)})` : tx``}`;
 }
 

@@ -137,7 +137,7 @@ export async function buildReport(tx: Tx, s: SessionInfo, type: string, sp: SP, 
       kpiRow(doc, [["Total", String(sum.total)], ["Realizados", String(sum.done)], ["Pendientes", String(sum.pending), sum.pending ? COLORS.warn : undefined], ["Conformes", String(sum.pass), COLORS.ok], ["No conformes", String(sum.fail), sum.fail ? COLORS.bad : undefined], ["NC abiertas", String(sum.openNcs)]]);
       if (c.close_notes) paragraph(doc, c.close_notes, { size: 8.5 });
       const items = await tx`select ci.status, ci.result, ci.measured_at, ci.skip_reason, coalesce(a.code, pp.code) as code, coalesce(a.name, pp.name) as name, u.full_name, cr.code as crit, cv.version, i.code as instrument,
-          (select string_agg(coalesce(mv.point_code || ': ', '') || coalesce(mv.raw_input, mv.option_value, '—') || coalesce(' ' || mv.raw_unit, ''), '; ' order by mv.sort_order) from measurement_values mv where mv.measurement_id = ci.last_measurement_id) as vals, m.criterion_version_id
+          (select string_agg(coalesce(mv.point_code || ': ', '') || coalesce(mv.raw_input, mv.option_value, case when mv.checked then 'OK' when mv.checked = false then 'NO OK' end, '—') || coalesce(' ' || mv.raw_unit, ''), '; ' order by mv.sort_order) from measurement_values mv where mv.measurement_id = ci.last_measurement_id) as vals, m.criterion_version_id
         from campaign_items ci left join assets a on a.id = ci.asset_id left join plan_points pp on pp.id = ci.plan_point_id
         left join measurements m on m.id = ci.last_measurement_id left join users u on u.id = m.measured_by left join instruments i on i.id = m.instrument_id
         left join criterion_versions cv on cv.id = m.criterion_version_id left join criteria cr on cr.id = cv.criterion_id
@@ -155,7 +155,7 @@ export async function buildReport(tx: Tx, s: SessionInfo, type: string, sp: SP, 
       const meta = await reportMeta(tx, s, `Ficha e historial de ${a.code}`, { subtitle: a.name, filters: [["Categoría", a.cat], ["Ubicación", a.loc ?? "—"], ["Estado", ASSET_STATUS_LABEL[a.status as AssetStatus]], ["Nº serie", a.serial_number ?? "—"]] });
       const { doc, done } = createReport(meta);
       const ms = await tx`select m.recorded_at, m.result, m.status, m.invalidation_reason, u.full_name, i.code as inst, cr.code as crit, cv.version, m.criterion_version_id,
-        (select string_agg(coalesce(mv.point_code || ': ', '') || coalesce(mv.raw_input, mv.option_value, '—') || coalesce(' ' || mv.raw_unit, ''), '; ' order by mv.sort_order) from measurement_values mv where mv.measurement_id = m.id) as vals
+        (select string_agg(coalesce(mv.point_code || ': ', '') || coalesce(mv.raw_input, mv.option_value, case when mv.checked then 'OK' when mv.checked = false then 'NO OK' end, '—') || coalesce(' ' || mv.raw_unit, ''), '; ' order by mv.sort_order) from measurement_values mv where mv.measurement_id = m.id) as vals
         from measurements m join users u on u.id = m.measured_by left join instruments i on i.id = m.instrument_id left join criterion_versions cv on cv.id = m.criterion_version_id left join criteria cr on cr.id = cv.criterion_id
         where m.asset_id = ${a.id} order by m.recorded_at desc`;
       table(doc, [{ header: "Fecha", width: 0.16 }, { header: "Resultado", width: 0.14, color: (r) => resultColor(r[1]) }, { header: "Valores", width: 0.28 }, { header: "Criterio", width: 0.12 }, { header: "Instrumento", width: 0.12 }, { header: "Técnico", width: 0.18 }],

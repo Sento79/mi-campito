@@ -10,7 +10,7 @@ import { findAssetByScan } from "@/lib/server/services/measurements";
 export default async function QrResolve({ params }: { params: Promise<{ code: string }> }) {
   const s = await requireSession();
   const { code } = await params;
-  const a = await withCtx(s, (tx) => findAssetByScan(tx, decodeURIComponent(code).slice(0, 120)));
+  const a = await withCtx(s, (tx) => findAssetByScan(tx, code.slice(0, 120)));
   if (!a) notFound();
   redirect(`/inventario/${a.id}`);
 }

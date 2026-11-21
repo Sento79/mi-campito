@@ -16,6 +16,7 @@ interface Preview {
 export function ImportWizard({ columns }: { columns: { label: string; required: boolean; help: string }[] }) {
   const [file, setFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<Preview | null>(null);
+  const fileGen = React.useRef(0);
   const prev = useAction(previewImportAction);
   const commit = useAction(commitImportAction);
   const router = useRouter();
@@ -45,6 +46,7 @@ export function ImportWizard({ columns }: { columns: { label: string; required: 
             accept=".csv,.xlsx,.txt"
             aria-label="Archivo de importación"
             onChange={(e) => {
+              fileGen.current++;
               setFile(e.target.files?.[0] ?? null);
               setPreview(null);
             }}
@@ -55,8 +57,9 @@ export function ImportWizard({ columns }: { columns: { label: string; required: 
             disabled={!file}
             loading={prev.pending}
             onClick={async () => {
+              const gen = fileGen.current;
               const r = await prev.run(fd());
-              if (r?.ok) setPreview(r.data as Preview);
+              if (r?.ok && gen === fileGen.current) setPreview(r.data as Preview);
             }}
           >
             Previsualizar

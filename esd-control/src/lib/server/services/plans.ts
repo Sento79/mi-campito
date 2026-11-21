@@ -67,7 +67,11 @@ export async function addPlanVersion(tx: Tx, ctx: Ctx, planId: string, meta: { l
   const [active] = await tx`select code from campaigns where plan_id = ${planId} and status = 'in_progress' limit 1`;
   if (active) throw new AppError(`La campaña ${active.code} está en curso sobre este plano. Finalícela o páusela antes de cambiar de versión.`, 409);
   const [old] = await tx`select width_px, height_px from floor_plan_pages where version_id = ${plan.current_version_id} and page_number = 1`;
+  const [maxPage] = await tx`select max(page_number)::int as p from plan_points where plan_id = ${planId} and archived_at is null`;
   const v = await storeVersion(tx, ctx, planId, (plan.maxv ?? 0) + 1, up, meta);
+  if (maxPage?.p && maxPage.p > v.pages.length) {
+    throw new AppError(`Hay puntos activos en la página ${maxPage.p} y la nueva versión solo tiene ${v.pages.length} página(s). Archive o reubique esos puntos antes de cambiar de versión.`, 409);
+  }
   await tx`update floor_plans set current_version_id = ${v.versionId} where id = ${planId}`;
   let warning: string | null = null;
   if (old) {
@@ -111,7 +115,7 @@ function pointRow(p: PointInput) {
   if (p.pointType === "asset" && !p.assetId) throw new AppError("Un punto de tipo activo debe vincular un activo", 422, { assetId: "Obligatorio" });
   return {
     code: p.code, name: p.name, point_type: p.pointType, category_id: p.categoryId, location_id: p.locationId,
-    asset_id: p.assetId, criterion_id: p.criterionId, route_order: p.routeOrder, notes: p.notes,
+    asset_id: p.pointType === "asset" ? p.assetId : null, criterion_id: p.criterionId, route_order: p.routeOrder, notes: p.notes,
   };
 }
 

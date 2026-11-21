@@ -144,8 +144,10 @@ export function table(doc: Doc, cols: Column[], rows: string[][], opts: { fontSi
   drawHeader();
   for (const r of rows) {
     doc.font("R").fontSize(fs);
-    // Las celdas extra (más allá de las columnas) solo sirven a las funciones de color
-    const cells = r.slice(0, cols.length);
+    // Las celdas extra (más allá de las columnas) solo sirven a las funciones de color.
+    // Una celda nunca puede superar el alto útil de una página: se recorta con indicación.
+    const maxH = doc.page.height - doc.page.margins.top - doc.page.margins.bottom - (fs + 30);
+    const cells = r.slice(0, cols.length).map((cell, i) => fitText(doc, cell ?? "", widths[i] - 2 * pad, maxH));
     const h = Math.max(...cells.map((cell, i) => doc.heightOfString(cell ?? "", { width: widths[i] - 2 * pad }))) + 6;
     if (doc.y + h > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
@@ -162,6 +164,19 @@ export function table(doc: Doc, cols: Column[], rows: string[][], opts: { fontSi
   }
   doc.x = left;
   doc.moveDown(0.5);
+}
+
+/** Recorta texto para que quepa en un alto máximo (añade «… [texto recortado]»). */
+function fitText(doc: Doc, text: string, width: number, maxH: number): string {
+  if (doc.heightOfString(text, { width }) <= maxH) return text;
+  const suffix = " … [texto recortado; véase el registro completo en la aplicación]";
+  let lo = 0, hi = text.length;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi + 1) / 2);
+    if (doc.heightOfString(text.slice(0, mid) + suffix, { width }) <= maxH) lo = mid;
+    else hi = mid - 1;
+  }
+  return text.slice(0, lo) + suffix;
 }
 
 export function resultColor(label: string): string | undefined {

@@ -19,6 +19,8 @@ export const OUTBOX_EVENT = "esd-outbox-changed";
 export interface OutboxItem {
   clientId: string;
   orgId: string;
+  /** Técnico que tomó la medición: solo él puede enviarla */
+  userId: string;
   payload: Record<string, unknown>;
   label: string;
   provisionalResult: string | null;
@@ -49,21 +51,28 @@ function db() {
 
 const emit = () => window.dispatchEvent(new Event(OUTBOX_EVENT));
 
+/** Identidad de la sesión actual (la fija el layout autenticado). */
+let identity: { orgId: string; userId: string } | null = null;
+export function setOutboxIdentity(id: { orgId: string; userId: string } | null) {
+  identity = id;
+}
+const mine = (it: OutboxItem) => !!identity && it.orgId === identity.orgId && it.userId === identity.userId;
+
 export async function enqueue(item: Omit<OutboxItem, "attempts" | "status" | "createdAt">) {
   const d = await db();
   await d.put("outbox", { ...item, attempts: 0, status: "pending", createdAt: new Date().toISOString() } satisfies OutboxItem);
   emit();
 }
 
+/** Solo las mediciones del usuario y organización actuales. */
 export async function listOutbox(): Promise<OutboxItem[]> {
   const d = await db();
-  return (await d.getAll("outbox")) as OutboxItem[];
+  return ((await d.getAll("outbox")) as OutboxItem[]).filter(mine);
 }
 
 export async function outboxCount(): Promise<number> {
   try {
-    const d = await db();
-    return await d.count("outbox");
+    return (await listOutbox()).length;
   } catch {
     return 0;
   }
@@ -85,7 +94,8 @@ export async function syncOutbox(opts: { includeErrored?: boolean } = {}): Promi
     failed = 0;
   try {
     const d = await db();
-    const items = (await d.getAll("outbox")) as OutboxItem[];
+    // Nunca se envían mediciones de otro usuario u organización con la sesión actual
+    const items = ((await d.getAll("outbox")) as OutboxItem[]).filter(mine);
     for (const it of items.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       if (it.status === "error" && !opts.includeErrored) continue;
       let res: Response;
@@ -139,7 +149,7 @@ export async function getCachedTarget(orgId: string, key: string): Promise<Cache
   }
 }
 
-/** Borra la caché de activos (al cerrar sesión). La cola NO se borra si tiene pendientes. */
+/** Borra la caché de activos (al cerrar sesión). La cola NO se borra: cada técnico la recupera al volver a entrar. */
 export async function clearOfflineCache() {
   try {
     const d = await db();

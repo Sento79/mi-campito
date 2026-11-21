@@ -107,7 +107,7 @@ export function toZpl(d: LabelData, widthMm: number, heightMm: number, l: LabelL
     // Tamaño de módulo aproximado para que el QR ocupe qrSize del alto (enlace ~40 caracteres => ~33 módulos)
     const target = Math.floor(inner * l.qrSize);
     const mag = Math.max(1, Math.min(10, Math.floor(target / 37)));
-    parts.push(`^FO${m},${m}^BQN,2,${mag}^FDLA,${d.url}^FS`);
+    parts.push(`^FO${m},${m}^BQN,2,${mag}^FH^FDLA,${zplText(d.url)}^FS`);
     textX = m + mag * 37 + m;
   }
   const fontH = Math.max(12, Math.round((l.fontSize / 72) * dpi));
@@ -120,7 +120,16 @@ export function toZpl(d: LabelData, widthMm: number, heightMm: number, l: LabelL
   }
   if (l.code === "barcode" || l.code === "both") {
     const bh = Math.max(20, Math.round(inner * 0.3));
-    parts.push(`^FO${textX},${H - m - bh}^BY2^BCN,${bh},N,N,N^FD${zplText(d.scanCode)}^FS`);
+    // Code 128: ~11 módulos por carácter + arranque/parada/control y zonas mudas (~35)
+    const avail = l.code === "both" ? W - textX - m : W - 2 * m;
+    const modules = 11 * d.scanCode.length + 35;
+    const by = Math.min(3, Math.floor(avail / modules));
+    if (by >= 1) {
+      parts.push(`^FO${l.code === "both" ? textX : m},${H - m - bh}^BY${by}^BCN,${bh},N,N,N^FH^FD${zplText(d.scanCode)}^FS`);
+    } else {
+      // No cabe un código legible: se indica en lugar de imprimir barras ilegibles
+      parts.push(`^FO${m},${H - m - fontH}^A0N,${fontH},${fontH}^FH^FD${zplText("Código demasiado largo para el ancho")}^FS`);
+    }
   }
   parts.push("^PQ1", "^XZ");
   return parts.join("\n");

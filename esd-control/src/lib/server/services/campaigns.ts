@@ -107,8 +107,12 @@ export async function campaignSummary(tx: Tx, id: string): Promise<CampaignSum> 
 }
 
 export async function transitionCampaign(tx: Tx, ctx: Ctx, perms: Set<string>, id: string, to: CampaignStatus | "pause" | "resume", data: { notes?: string | null; acknowledge?: boolean }) {
-  const [c] = await tx`select * from campaigns where id = ${id}`;
-  if (!c) throw new NotFoundError("Campaña no encontrada");
+  const [visible] = await tx`select id from campaigns where id = ${id}`;
+  if (!visible) throw new NotFoundError("Campaña no encontrada");
+  if (to !== "closed" && !perms.has("edit")) throw new AppError("Se requiere el permiso de edición para cambiar el estado de la campaña", 403);
+  // Bloqueo: dos transiciones simultáneas no pueden partir del mismo estado leído
+  const [c] = await tx`select * from campaigns where id = ${id} for update`;
+  if (!c) throw new AppError("No tiene permiso para modificar la campaña", 403);
   if (to === "pause" || to === "resume") {
     if (c.status !== "in_progress") throw new AppError("Solo se pueden pausar/reanudar campañas en curso");
     const upd = await tx`update campaigns set is_paused = ${to === "pause"} where id = ${id} returning id`;
@@ -147,7 +151,7 @@ export async function skipItem(tx: Tx, ctx: Ctx, itemId: string, reason: string)
   if (!it) throw new NotFoundError("Elemento no encontrado");
   if (["closed", "cancelled"].includes(it.cstatus)) throw new AppError("La campaña no admite cambios");
   if (it.status !== "pending") throw new AppError("Solo se pueden omitir elementos pendientes");
-  const upd = await tx`update campaign_items set status = 'skipped', skip_reason = ${reason} where id = ${itemId} returning id`;
-  if (!upd.length) throw new AppError("No tiene permiso", 403);
+  const upd = await tx`update campaign_items set status = 'skipped', skip_reason = ${reason} where id = ${itemId} and status = 'pending' returning id`;
+  if (!upd.length) throw new AppError("El elemento ya no está pendiente o no tiene permiso para modificarlo", 409);
   await audit(tx, ctx, { action: "skip", entityType: "campaign_item", entityId: itemId, summary: `Elemento omitido en ${it.code}`, reason });
 }

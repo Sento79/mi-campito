@@ -5,6 +5,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown, Save } from "lucide-react";
 import { Button, Input, Select } from "@/components/ui/core";
 import { useAction } from "@/components/ui/client";
 import { saveTemplateAction } from "../actions";
+import { nextFreeId } from "@/lib/domain/ids";
 
 interface Item { code: string; name: string; instructions: string | null; required: boolean; criterionId: string | null }
 
@@ -52,7 +53,7 @@ export function TemplateEditor({ categoryId, template, criteria, readOnly }: { c
       </div>
       {!readOnly ? (
         <div className="flex justify-between">
-          <Button variant="outline" size="sm" icon={Plus} onClick={() => setItems((x) => [...x, { code: `P${x.length + 1}`, name: `Punto ${x.length + 1}`, instructions: null, required: true, criterionId: null }])}>Añadir punto</Button>
+          <Button variant="outline" size="sm" icon={Plus} onClick={() => setItems((x) => [...x, { code: nextFreeId("P", x.map((i) => i.code)), name: `Punto ${x.length + 1}`, instructions: null, required: true, criterionId: null }])}>Añadir punto</Button>
           <Button size="sm" icon={Save} loading={save.pending} onClick={async () => {
             const r = await save.run({ categoryId, templateId: template?.id ?? null, name, items }, { success: "Plantilla guardada" });
             if (r?.ok) router.refresh();

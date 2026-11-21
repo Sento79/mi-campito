@@ -13,8 +13,8 @@ export default async function CategoryPage({ params }: { params: Promise<{ id: s
   if (!isNew && !/^[0-9a-f-]{36}$/.test(id)) notFound();
   const d = await withCtx(s, async (tx) => {
     const [c] = isNew ? [null] : await tx`select * from categories where id = ${id}`;
-    const procedures = await tx`select id, code || ' · ' || title || ' (rev. ' || revision || ')' as label from procedures where is_active order by code`;
-    const criteria = await tx`select c.id, c.code || ' · ' || c.name || coalesce(' — v' || cv.version, ' — sin versión activa') as label from criteria c left join criterion_versions cv on cv.criterion_id = c.id and cv.status = 'active' where c.is_active order by c.code`;
+    const procedures = await tx`select id, code || ' · ' || title || ' (rev. ' || revision || ')' || case when is_active then '' else ' — inactivo' end as label from procedures where is_active or id = ${c?.procedure_id ?? null} order by code`;
+    const criteria = await tx`select c.id, c.code || ' · ' || c.name || coalesce(' — v' || cv.version, ' — sin versión activa') || case when c.is_active then '' else ' — retirado' end as label from criteria c left join criterion_versions cv on cv.criterion_id = c.id and cv.status = 'active' where c.is_active or c.id = ${c?.criterion_id ?? null} order by c.code`;
     const templates = isNew ? [] : await tx`select t.id, t.name, coalesce(json_agg(json_build_object('code', i.code, 'name', i.name, 'instructions', i.instructions, 'required', i.required, 'criterionId', i.criterion_id) order by i.sort_order) filter (where i.id is not null), '[]') as items from point_templates t left join point_template_items i on i.template_id = t.id where t.category_id = ${id} group by t.id order by t.created_at`;
     const auditRows = !isNew && s.permissions.has("audit.read") ? await tx`select l.id::text, l.at, l.action, l.summary, l.reason, l.before_data, l.after_data, u.full_name as user_name from audit_log l left join users u on u.id = l.user_id where l.entity_type = 'category' and l.entity_id = ${id} order by l.at desc limit 20` : [];
     return { c, procedures, criteria, templates, auditRows };

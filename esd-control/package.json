@@ -20,7 +20,7 @@
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "engines": {
-    "node": ">=20.11"
+    "node": ">=20.12"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.1",

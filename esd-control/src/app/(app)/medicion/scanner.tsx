@@ -103,6 +103,13 @@ export function ScanBar({
             ref={inputRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              // Lectores configurados con Tab como sufijo: enviar en lugar de saltar de campo
+              if (cfg.suffix === "Tab" && e.key === "Tab" && value.trim()) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
             placeholder="Escanee el QR / código de barras o escriba el ID y pulse Enter"
             aria-label="Código del activo"
             autoComplete="off"
@@ -145,10 +152,10 @@ function CameraScanner({ onClose, onCode }: { onClose: () => void; onCode: (c: s
       try {
         const { BrowserMultiFormatReader } = await import("@zxing/browser");
         const reader = new BrowserMultiFormatReader();
-        const controls = await reader.decodeFromConstraints({ video: { facingMode: "environment" } }, videoRef.current!, (res) => {
+        const controls = await reader.decodeFromConstraints({ video: { facingMode: "environment" } }, videoRef.current!, (res, _err, ctrl) => {
           if (res && !cancelled) {
             cancelled = true;
-            controls.stop();
+            ctrl.stop();
             onCode(res.getText());
           }
         });

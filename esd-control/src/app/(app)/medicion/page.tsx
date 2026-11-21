@@ -14,7 +14,7 @@ export default async function MeasurePage() {
     <>
       <PageHeader title="Medición rápida" description="Escanear → medir → guardar → siguiente. El resultado lo calcula el servidor con el criterio vigente." />
       <Suspense>
-        <QuickMeasure orgId={s.orgId} settings={s.org.settings} instruments={instruments} canCreateNc={s.permissions.has("measure") || s.permissions.has("create")} />
+        <QuickMeasure orgId={s.orgId} userId={s.userId} settings={s.org.settings} instruments={instruments} canCreateNc={s.permissions.has("measure") || s.permissions.has("create")} />
       </Suspense>
     </>
   );

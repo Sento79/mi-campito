@@ -7,14 +7,16 @@ import { useToast } from "@/components/ui/client";
 import { addPlanVersionAction, createPlanAction } from "./actions";
 
 const MAX_MB = 20;
-const TARGET_WIDTH = 2400; // px de la imagen renderizada de cada página PDF
+// Anchos de renderizado de página PDF, de mayor a menor calidad, para respetar el límite total de subida
+const RENDER_WIDTHS = [2400, 1800, 1400, 1000];
+const TOTAL_BUDGET = 24 * 1024 * 1024; // límite de la Server Action: 25 MB
 
 /**
  * Convierte cada página de un PDF a PNG en el navegador con pdf.js (sin
  * enviar el PDF a terceros). El servidor guarda el PDF original y las
  * imágenes de página, sobre las que se posicionan los puntos.
  */
-async function renderPdfPages(file: File, onProgress: (done: number, total: number) => void): Promise<Blob[]> {
+async function renderPdfPages(file: File, targetWidth: number, onProgress: (done: number, total: number) => void): Promise<Blob[]> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
@@ -23,7 +25,7 @@ async function renderPdfPages(file: File, onProgress: (done: number, total: numb
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const base = page.getViewport({ scale: 1 });
-    const scale = Math.min(4, TARGET_WIDTH / base.width);
+    const scale = Math.min(4, targetWidth / base.width);
     const vp = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(vp.width);
@@ -61,7 +63,13 @@ export function PlanUploadForm({ mode, planId, locations, users }: { mode: "crea
     try {
       if (file.type === "application/pdf") {
         setProgress("Procesando PDF…");
-        const pages = await renderPdfPages(file, (d, t) => setProgress(`Convirtiendo página ${d} de ${t}…`));
+        let pages: Blob[] = [];
+        let fits = false;
+        for (const w of RENDER_WIDTHS) {
+          pages = await renderPdfPages(file, w, (d, t) => setProgress(`Convirtiendo página ${d} de ${t} (${w} px)…`));
+          if (file.size + pages.reduce((n, b) => n + b.size, 0) <= TOTAL_BUDGET) { fits = true; break; }
+        }
+        if (!fits) { setError("El plano es demasiado pesado incluso a resolución reducida. Divida el PDF o súbalo como imagen."); return; }
         pages.forEach((b, i) => fd.set(`page_${String(i + 1).padStart(3, "0")}`, new File([b], `p${i + 1}.png`, { type: "image/png" })));
       }
       setProgress("Subiendo…");

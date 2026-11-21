@@ -1,9 +1,7 @@
 // Carga .env para los scripts ejecutados con tsx (Next.js lo hace por sí mismo).
-try {
-  process.loadEnvFile(".env");
-} catch {
-  /* sin .env: se usan las variables del entorno */
-}
+import { existsSync } from "node:fs";
+// Requiere Node ≥ 20.12 (process.loadEnvFile). Solo se ignora la ausencia del archivo.
+if (existsSync(".env")) process.loadEnvFile(".env");
 export function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) {

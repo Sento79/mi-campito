@@ -15,10 +15,12 @@ export const GET = api({ permission: "export" }, async (req, s) => {
     const r = await tx`
       select a.code, a.scan_code, a.name, c.code as category, app_location_path(a.location_id) as location, a.manufacturer, a.model, a.serial_number,
              a.status, a.commissioned_on, a.last_result, a.last_measured_at, a.next_due_at, a.notes
-        from assets a join categories c on c.id = a.category_id where ${assetWhere(tx, sp, s.org.settings.dueLeadDays)} order by a.code limit 20000`;
+        from assets a join categories c on c.id = a.category_id where ${assetWhere(tx, sp, s.org.settings.dueLeadDays)} order by a.code limit 20001`;
+    if (r.length > 20000) return null;
     await audit(tx, s, { action: "export", entityType: "asset", summary: `Exportación de ${r.length} activos (${format.toUpperCase()})`, after: { filters: sp } });
     return r;
   });
+  if (!rows) return NextResponse.json({ error: "Más de 20 000 activos coinciden con los filtros. Acote la búsqueda y exporte por partes." }, { status: 413 });
   const headers = ["ID", "Código escaneo", "Nombre", "Categoría", "Ubicación", "Fabricante", "Modelo", "Nº serie", "Estado", "Fecha alta", "Último resultado", "Última medición", "Próxima medición", "Observaciones"];
   const data = rows.map((r) => [r.code, r.scan_code, r.name, r.category, r.location, r.manufacturer, r.model, r.serial_number, ASSET_STATUS_LABEL[r.status as AssetStatus] ?? r.status, r.commissioned_on, r.last_result ? RESULT_LABEL[r.last_result as Result] : "Sin medir", r.last_measured_at?.toISOString() ?? "", r.next_due_at?.toISOString() ?? "", r.notes]);
   const stamp = new Date().toISOString().slice(0, 10);

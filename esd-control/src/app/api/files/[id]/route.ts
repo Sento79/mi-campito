@@ -17,7 +17,7 @@ export const GET = api({ permission: "read" }, async (req, s, params) => {
       "content-type": doc.mime_type,
       "content-length": String(data.length),
       "content-disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(doc.file_name)}`,
-      "cache-control": "private, max-age=300",
+      "cache-control": "no-store",
       "x-content-type-options": "nosniff",
       "content-security-policy": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",
     },

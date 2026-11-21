@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type postgres from "postgres";
 import { app, as, makeCriterion, makeOrg, owner, type Fixture } from "./helpers";
 import { dbTestsEnabled } from "./env";
-import { commitImport, previewImport } from "../../src/lib/server/services/assets";
+import { commitImport, createAsset, previewImport } from "../../src/lib/server/services/assets";
 import { createCampaign, transitionCampaign, campaignSummary } from "../../src/lib/server/services/campaigns";
 import { recordMeasurement } from "../../src/lib/server/services/measurements";
 import { buildReport } from "../../src/lib/server/reports";
@@ -61,6 +61,14 @@ d("Importación de activos", () => {
   });
   it("detecta IDs ya existentes", async () => {
     const p = await as(a, F.manager, (tx) => previewImport(tx, [header, ["IMP-1", "Repetido", "TAP", ""]]));
+    expect(p.issues[0].message).toMatch(/ya existe/);
+  });
+  it("el ID de un activo no puede coincidir con el código de escaneo de otro", async () => {
+    const [cat] = await as(a, F.admin, (tx) => tx`select id from categories where org_id = ${F.orgId} and code = 'TAP'`);
+    const base = { name: "x", categoryId: cat.id as string, manufacturer: null, model: null, serialNumber: null, locationId: null, commissionedOn: "2026-01-01", status: "active" as const, ownerUserId: null, periodUnit: null, periodCount: null, criterionId: null, pointTemplateId: null, notes: null, reason: null };
+    await as(a, F.manager, (tx) => createAsset(tx, F.manager, { ...base, code: "COL-1", scanCode: "COL-2" }));
+    await expect(as(a, F.manager, (tx) => createAsset(tx, F.manager, { ...base, code: "COL-2", scanCode: "QR-COL-2" }))).rejects.toThrow(/duplicado/);
+    const p = await as(a, F.manager, (tx) => previewImport(tx, [["codigo", "nombre", "categoria"], ["COL-2", "x", "TAP"]]));
     expect(p.issues[0].message).toMatch(/ya existe/);
   });
   it("el técnico no puede importar (RLS)", async () => {

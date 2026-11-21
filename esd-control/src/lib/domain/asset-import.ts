@@ -21,6 +21,14 @@ export const IMPORT_COLUMNS = [
   { key: "notes", label: "observaciones", required: false, help: "" },
 ] as const;
 
+/** AAAA-MM-DD que existe en el calendario (rechaza 2025-02-30). */
+export function isCalendarDate(v: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+
 export const ASSET_STATUSES = ["active", "retired", "repair", "blocked", "review"] as const;
 export type AssetStatus = (typeof ASSET_STATUSES)[number];
 export const ASSET_STATUS_LABEL: Record<AssetStatus, string> = {
@@ -59,7 +67,7 @@ export const importRowSchema = z
       .trim()
       .optional()
       .transform((v) => (v ? v : undefined))
-      .refine((v) => !v || (/^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z"))), "Fecha no válida (AAAA-MM-DD)"),
+      .refine((v) => !v || isCalendarDate(v), "Fecha no válida (AAAA-MM-DD)"),
     period_unit: z
       .string()
       .trim()
@@ -106,8 +114,12 @@ export function mapHeaders(headers: string[]): Record<number, string> {
 }
 
 export interface ImportLookups {
+  /** Códigos en MAYÚSCULAS sin ambigüedad */
   categoryCodes: Set<string>;
   locationCodes: Set<string>;
+  /** Códigos que existen en varias variantes de mayúsculas (no se pueden resolver) */
+  ambiguousCodes?: Set<string>;
+  /** IDs y códigos de escaneo existentes (en MAYÚSCULAS) */
   existingCodes: Set<string>;
   existingScanCodes: Set<string>;
 }
@@ -118,6 +130,11 @@ export function validateImport(rows: string[][], lookups: ImportLookups): Import
   if (rows.length === 0) return { valid, issues: [{ row: 1, message: "El archivo está vacío" }], total: 0 };
   const headerMap = mapHeaders(rows[0]);
   const present = new Set(Object.values(headerMap));
+  const counts = new Map<string, number>();
+  for (const k of Object.values(headerMap)) counts.set(k, (counts.get(k) ?? 0) + 1);
+  for (const [k, n] of counts) {
+    if (n > 1) issues.push({ row: 1, field: k, message: `La columna «${IMPORT_COLUMNS.find((c) => c.key === k)?.label ?? k}» aparece ${n} veces` });
+  }
   for (const c of IMPORT_COLUMNS) {
     if (c.required && !present.has(c.key)) issues.push({ row: 1, field: c.label, message: `Falta la columna obligatoria "${c.label}"` });
   }
@@ -142,6 +159,7 @@ export function validateImport(rows: string[][], lookups: ImportLookups): Import
     const d = parsed.data;
     const codeKey = d.code.toUpperCase();
     const scan = d.scan_code ?? d.code;
+    const scanKey = scan.toUpperCase();
     let ok = true;
     if (seenCodes.has(codeKey)) {
       issues.push({ row: rowNo, field: "codigo", message: `ID duplicado en el archivo (también en fila ${seenCodes.get(codeKey)})` });
@@ -151,24 +169,30 @@ export function validateImport(rows: string[][], lookups: ImportLookups): Import
       issues.push({ row: rowNo, field: "codigo", message: `El ID ${d.code} ya existe en el inventario` });
       ok = false;
     }
-    if (seenScan.has(scan)) {
-      issues.push({ row: rowNo, field: "codigo_escaneo", message: `Código de escaneo duplicado en el archivo (fila ${seenScan.get(scan)})` });
+    if (seenScan.has(scanKey) || (seenCodes.has(scanKey) && scanKey !== codeKey)) {
+      issues.push({ row: rowNo, field: "codigo_escaneo", message: `Código de escaneo duplicado en el archivo (fila ${seenScan.get(scanKey) ?? seenCodes.get(scanKey)})` });
       ok = false;
     }
-    if (lookups.existingScanCodes.has(scan)) {
+    if (scanKey !== codeKey && lookups.existingScanCodes.has(scanKey)) {
       issues.push({ row: rowNo, field: "codigo_escaneo", message: `El código de escaneo ${scan} ya está asignado` });
       ok = false;
     }
-    if (!lookups.categoryCodes.has(d.category_code.toUpperCase())) {
+    if (lookups.ambiguousCodes?.has(d.category_code.toUpperCase())) {
+      issues.push({ row: rowNo, field: "categoria", message: `Categoría "${d.category_code}" ambigua (existen códigos que solo difieren en mayúsculas)` });
+      ok = false;
+    } else if (!lookups.categoryCodes.has(d.category_code.toUpperCase())) {
       issues.push({ row: rowNo, field: "categoria", message: `Categoría "${d.category_code}" no existe` });
       ok = false;
     }
-    if (d.location_code && !lookups.locationCodes.has(d.location_code.toUpperCase())) {
+    if (d.location_code && lookups.ambiguousCodes?.has(d.location_code.toUpperCase())) {
+      issues.push({ row: rowNo, field: "ubicacion", message: `Ubicación "${d.location_code}" ambigua (existen códigos que solo difieren en mayúsculas)` });
+      ok = false;
+    } else if (d.location_code && !lookups.locationCodes.has(d.location_code.toUpperCase())) {
       issues.push({ row: rowNo, field: "ubicacion", message: `Ubicación "${d.location_code}" no existe` });
       ok = false;
     }
     seenCodes.set(codeKey, rowNo);
-    seenScan.set(scan, rowNo);
+    seenScan.set(scanKey, rowNo);
     if (ok) valid.push({ ...d, scan_code: scan, row: rowNo });
   }
   return { valid, issues, total: rows.length - 1 };

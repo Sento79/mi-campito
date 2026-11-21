@@ -44,6 +44,14 @@ export function defineAction<S extends z.ZodType, T>(
       const data = await withCtx(session, (tx) => handler(parsed.data, { tx, session }));
       return { ok: true, data };
     } catch (e) {
+      if (e instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        for (const i of e.issues) {
+          const k = i.path.join(".") || "_";
+          if (!fieldErrors[k]) fieldErrors[k] = i.message;
+        }
+        return { ok: false, error: Object.values(fieldErrors)[0] ?? "Revise los datos del formulario", fieldErrors };
+      }
       const u = toUserMessage(e);
       if (u.status >= 500) logger.error("action.failed", e, { userId: session.userId });
       return { ok: false, error: u.message, fieldErrors: u.fieldErrors };

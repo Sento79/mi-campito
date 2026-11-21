@@ -86,7 +86,13 @@ export function normalizeScanValue(raw: string, prefix = ""): string {
   let v = raw.replace(/[\r\n\t]/g, "").trim();
   if (prefix && v.startsWith(prefix)) v = v.slice(prefix.length);
   // Si el QR contiene un enlace de la propia app (/a/<codigo>), extraemos el código.
-  const m = /\/a\/([A-Za-z0-9_.\-%]+)\/?$/.exec(v);
-  if (m) v = decodeURIComponent(m[1]);
+  const m = /^(?:https?:\/\/[^/\s]+)?\/a\/([^/?#\s]+)\/?$/i.exec(v);
+  if (m) {
+    try {
+      v = decodeURIComponent(m[1]);
+    } catch {
+      v = m[1];
+    }
+  }
   return v.slice(0, 120);
 }

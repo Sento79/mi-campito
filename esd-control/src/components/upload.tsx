@@ -38,6 +38,8 @@ export function UploadButton({ action, fields, accept = ".pdf,.png,.jpg,.jpeg", 
               toast({ tone: "ok", title: "Archivo subido", body: f.name });
               router.refresh();
             } else toast({ tone: "bad", title: r.error });
+          } catch {
+            toast({ tone: "bad", title: "No se pudo subir el archivo", body: "Compruebe la conexión e inténtelo de nuevo." });
           } finally {
             setBusy(false);
           }

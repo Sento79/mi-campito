@@ -69,7 +69,7 @@ No se ha verificado contra ningún servicio Supabase real.
 
 ## Arranque local
 
-Requisitos: Node.js ≥ 20.11 (probado con 22), PostgreSQL ≥ 14 (probado con 16).
+Requisitos: Node.js ≥ 20.12 (probado con 22), PostgreSQL ≥ 14 (probado con 16).
 
 ```bash
 cd esd-control
@@ -137,7 +137,14 @@ npm run test:e2e      # Playwright: requiere build; recrea la BD esd_e2e y aplic
 - **Integración** (`tests/integration`, BD real): aislamiento RLS entre organizaciones, permisos por rol, inmutabilidad de mediciones y auditoría, invalidación, idempotencia offline, NC automática, política de instrumento, criterio cambiado, cierre de NC y de campaña, bloqueo de plano, importación atómica, multipunto con plantilla, campañas, informes PDF y etiquetas.
 - **E2E** (`tests/e2e`): login, alta de activo y etiqueta, lectura HID y entrada manual, medición y resultado, historial, NC con verificación, campaña, medición sobre plano, exportación PDF/XLSX, permisos del rol Consulta y QR protegido.
 
-Bases de datos de prueba por defecto: `esd_test` y `esd_e2e` (propietario `esd_owner`); configurables con `TEST_*` y `E2E_*` (ver `tests/integration/env.ts` y `playwright.config.ts`). `SKIP_DB_TESTS=1` omite la integración.
+Bases de datos de prueba (créelas una vez; sus esquemas se recrean en cada ejecución):
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE esd_test OWNER esd_owner;"
+sudo -u postgres psql -c "CREATE DATABASE esd_e2e OWNER esd_owner;"
+```
+
+Por defecto los tests usan `esd_owner` / `esd_owner_dev` y `esd_app` / `esd_app_dev` en localhost; configúrelos con `TEST_MIGRATION_DATABASE_URL`, `TEST_APP_DB_PASSWORD`, `TEST_DATABASE_URL` y `E2E_*` (ver `tests/integration/env.ts` y `playwright.config.ts`, o un archivo `.env.test`). El rol `esd_app` es común al clúster: use la misma contraseña en desarrollo y tests o clústeres distintos. `SKIP_DB_TESTS=1` omite la integración.
 
 ## Despliegue
 
@@ -165,8 +172,10 @@ Plataformas sin disco persistente (p. ej. funciones serverless) requieren implem
 - Las mediciones que no pueden enviarse se guardan en una **cola en IndexedDB** con un `clientId` (UUID); el servidor es idempotente por ese ID, así que reenviar nunca duplica.
 - La interfaz indica claramente «Guardada en este dispositivo — NO registrada todavía» y muestra un contador en la cabecera. Solo se elimina de la cola cuando el servidor confirma; los rechazos (4xx) quedan marcados para reintentar o descartar.
 - El resultado mostrado sin conexión es **provisional**; el servidor recalcula y, si el criterio vigente cambió, lo marca «Requiere revisión».
-- Solo se guardan sin conexión los activos ya consultados en el dispositivo (se borran al cerrar sesión). Un service worker cachea la página de medición y los recursos estáticos, nunca respuestas de API.
-- **Limitación**: no hay descarga masiva previa de inventario para trabajar sin conexión desde cero, ni sincronización de otros módulos.
+- La cola es de cada técnico: solo se envían (y se muestran) las mediciones del usuario y organización con sesión iniciada; si otra persona entra en el mismo dispositivo, no se le atribuyen.
+- Solo se guardan sin conexión los activos ya consultados en el dispositivo (se borran al cerrar sesión). Las mediciones con foto requieren conexión (la foto no se guarda en la cola).
+- El service worker solo cachea recursos estáticos; **no** guarda páginas ni respuestas de API (evita mostrar datos de un usuario a otro). Por eso la página de medición debe estar abierta antes de perder la conexión.
+- **Limitación**: no se puede abrir la aplicación desde cero sin conexión, y no hay descarga masiva previa de inventario para trabajar sin conexión desde cero, ni sincronización de otros módulos.
 
 ## Seguridad
 
@@ -183,7 +192,7 @@ Plataformas sin disco persistente (p. ej. funciones serverless) requieren implem
 
 Resumen (detalle en [`docs/OPERACION.md`](docs/OPERACION.md)):
 
-- **Base de datos**: `pg_dump -Fc` diario + WAL/PITR del proveedor gestionado; conservar ≥ 30 días y copia fuera del sitio. Restaurar con `pg_restore` en una BD vacía y ejecutar `npm run db:migrate` (no aplica nada si ya está al día).
+- **Base de datos**: `pg_dump -Fc` diario + WAL/PITR del proveedor gestionado; conservar ≥ 30 días y copia fuera del sitio. Para restaurar: crear el rol `esd_app` **antes** de `pg_restore` (para que se restauren sus permisos), restaurar en una BD vacía y ejecutar `npm run db:migrate`, que además reaplica siempre `db/grants.sql`. Pasos completos en `docs/OPERACION.md`.
 - **Archivos** (`STORAGE_DIR`): copia incremental diaria (rsync/restic). La tabla `documents` guarda el SHA-256 de cada archivo para verificar integridad tras restaurar.
 - **Auditoría**: solo inserción; los eventos antiguos pueden moverse a `audit_log_archive` con `select audit_archive_before('AAAA-MM-DD')` (rol propietario), sin perder la consulta.
 - Pruebe la restauración periódicamente en un entorno aislado.

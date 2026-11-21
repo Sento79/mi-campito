@@ -14,6 +14,11 @@ describe("lectura de dimensiones de imagen", () => {
     const jpg = Buffer.concat([Buffer.from([0xff, 0xd8]), app0, sof, Buffer.from([0xff, 0xd9])]);
     expect(imageSize(jpg)).toEqual({ width: 400, height: 300 });
   });
+  it("JPEG con bytes de relleno FF antes de los marcadores", () => {
+    const app0 = Buffer.from([0xff, 0xff, 0xe0, 0x00, 0x10, ...Buffer.from("JFIF\0"), 1, 1, 0, 0, 1, 0, 1, 0, 0]);
+    const sof = Buffer.from([0xff, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x00, 0x64, 0x00, 0xc8, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1]);
+    expect(imageSize(Buffer.concat([Buffer.from([0xff, 0xd8]), app0, sof]))).toEqual({ width: 200, height: 100 });
+  });
   it("devuelve null con datos no válidos", () => {
     expect(imageSize(Buffer.from("hola"))).toBeNull();
   });

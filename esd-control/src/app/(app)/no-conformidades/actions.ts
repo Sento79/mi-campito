@@ -30,7 +30,11 @@ export const createNcAction = defineAction(
       if (!row) throw new AppError("Medición no encontrada", 404);
       links.push({ measurementId: row.id, assetId: row.asset_id, planPointId: row.plan_point_id });
     }
-    for (const a of i.assetIds) if (!links.some((l) => l.assetId === a)) links.push({ assetId: a });
+    for (const a of i.assetIds) {
+      const [asset] = await tx`select id from assets where id = ${a}`;
+      if (!asset) throw new AppError("Activo no encontrado", 404);
+      if (!links.some((l) => l.assetId === a)) links.push({ assetId: a });
+    }
     const nc = await createNonconformity(tx, session, { ...i, links });
     revalidatePath("/no-conformidades");
     return nc;
@@ -83,8 +87,11 @@ export const transitionNcAction = defineAction(
 export const addNcActionAction = defineAction(
   { permission: ["edit", "validate", "create"], schema: z.object({ ncId: z.string().uuid(), kind: z.enum(["containment", "corrective", "preventive"]), description: z.string().trim().min(3).max(4000), ownerUserId: nul(z.string().uuid()), dueOn: nul(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)) }) },
   async (i, { tx, session }) => {
-    const [nc] = await tx`select code, status from nonconformities where id = ${i.ncId}`;
-    if (!nc) throw new AppError("No encontrada", 404);
+    const [visible] = await tx`select id from nonconformities where id = ${i.ncId}`;
+    if (!visible) throw new AppError("No encontrada", 404);
+    // Mismo bloqueo que el cierre: o se ve la acción abierta al cerrar, o aquí se ve la NC cerrada
+    const [nc] = await tx`select code, status from nonconformities where id = ${i.ncId} for update`;
+    if (!nc) throw new AppError("No tiene permiso para modificar esta no conformidad", 403);
     if (nc.status === "closed") throw new AppError("La NC está cerrada");
     const [a] = await tx`insert into nc_actions(org_id, nc_id, kind, description, owner_user_id, due_on, created_by) values (${session.orgId}, ${i.ncId}, ${i.kind}, ${i.description}, ${i.ownerUserId}, ${i.dueOn}, ${session.userId}) returning id`;
     if (i.ownerUserId && i.ownerUserId !== session.userId) {

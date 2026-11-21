@@ -46,6 +46,16 @@ export const numericRuleSchema = z
   });
 export type NumericRule = z.infer<typeof numericRuleSchema>;
 
+
+const uniqueBy = <T>(key: (x: T) => string, what: string) => (arr: T[], ctx: z.RefinementCtx) => {
+  const seen = new Set<string>();
+  arr.forEach((x, i) => {
+    const k = key(x);
+    if (seen.has(k)) ctx.addIssue({ code: "custom", message: `${what} repetido: «${k}»`, path: [i] });
+    seen.add(k);
+  });
+};
+
 export const selectRuleSchema = z.object({
   kind: z.literal("select"),
   options: z
@@ -56,7 +66,8 @@ export const selectRuleSchema = z.object({
         outcome: z.enum(["pass", "fail", "review", "not_applicable"]),
       }),
     )
-    .min(1),
+    .min(1)
+    .superRefine(uniqueBy((o) => o.value, "Valor de opción")),
 });
 export type SelectRule = z.infer<typeof selectRuleSchema>;
 
@@ -71,7 +82,8 @@ export const checklistRuleSchema = z.object({
         allowNA: z.boolean().default(false),
       }),
     )
-    .min(1),
+    .min(1)
+    .superRefine(uniqueBy((o) => o.code, "Código de elemento")),
 });
 export type ChecklistRule = z.infer<typeof checklistRuleSchema>;
 
@@ -99,7 +111,8 @@ export const combinedRuleSchema = z.object({
   kind: z.literal("combined"),
   parts: z
     .array(z.object({ code: z.string().min(1).max(20), label: z.string().min(1).max(120), rule: partRuleSchema }))
-    .min(1),
+    .min(1)
+    .superRefine(uniqueBy((o) => o.code, "Código de parte")),
 });
 export type CombinedRule = z.infer<typeof combinedRuleSchema>;
 
@@ -334,19 +347,20 @@ function evalMultipoint(rule: MultipointRule, input: z.infer<typeof multipointIn
   }
   const reasons: string[] = [];
   const values: ValueOutcome[] = [];
-  const normalized: { p: ExpectedPoint; v?: Decimal; r: Result }[] = [];
+  const normalized: { p: ExpectedPoint; v?: Decimal; unit: string; r: Result; entered: boolean }[] = [];
   for (const p of expected) {
     const pi = input.points[p.code];
     const ev = evalNumeric(p.rule ?? rule.point, pi?.value, pi?.unit, p.required, `Punto ${p.code} (${p.name})`);
     values.push({ ...ev.outcome, pointCode: p.code, pointName: p.name, comment: pi?.comment });
-    normalized.push({ p, v: ev.normalized, r: ev.outcome.result });
+    normalized.push({ p, v: ev.normalized, unit: (p.rule ?? rule.point).unit, r: ev.outcome.result, entered: !!pi?.value?.trim() });
   }
   const unknown = Object.keys(input.points).filter((k) => !expected.some((p) => p.code === k) && input.points[k]?.value);
   if (unknown.length) reasons.push(`Se ignoraron puntos no definidos en la plantilla: ${unknown.join(", ")}`);
 
-  const missingRequired = normalized.filter((n) => n.p.required && n.r === "incomplete");
+  // Bloquean el resultado: obligatorios ausentes o inválidos, y optativos introducidos pero inválidos
+  const missingRequired = normalized.filter((n) => n.r === "incomplete" && (n.p.required || n.entered));
   if (missingRequired.length) {
-    reasons.push(`Faltan o son inválidos ${missingRequired.length} punto(s) obligatorio(s): ${missingRequired.map((n) => n.p.code).join(", ")}`);
+    reasons.push(`Faltan o son inválidos ${missingRequired.length} punto(s): ${missingRequired.map((n) => n.p.code + (n.p.required ? "" : " (optativo con valor no válido)")).join(", ")}`);
   }
   const present = normalized.filter((n) => n.r !== "not_applicable" && n.r !== "incomplete");
   const fails = present.filter((n) => n.r === "fail");
@@ -392,8 +406,23 @@ function evalMultipoint(rule: MultipointRule, input: z.infer<typeof multipointIn
         if (present.length === 0) reasons.push("No se ha registrado ningún punto");
         break;
       }
+      // Todos los valores se expresan en la unidad del criterio general antes de promediar
       let sum: Decimal = { coef: BigInt(0), scale: 0 };
-      for (const n of present) if (n.v) sum = add(sum, n.v);
+      let unitError: string | null = null;
+      for (const n of present) {
+        if (!n.v) continue;
+        const c = convert(n.v, n.unit, rule.point.unit);
+        if (!c.ok) {
+          unitError = `Punto ${n.p.code}: ${c.error}`;
+          break;
+        }
+        sum = add(sum, c.value);
+      }
+      if (unitError) {
+        result = "review";
+        reasons.push(`No se puede calcular la media: ${unitError}`);
+        break;
+      }
       const mean = divideInt(sum, present.length);
       const meanEval = evalNumeric(rule.point, toPlainString(mean), rule.point.unit, true, "Media");
       reasons.push(`Media de ${present.length} punto(s) = ${formatDecimal(mean)} ${rule.point.unit} (regla autorizada: ${agg.justification})`);

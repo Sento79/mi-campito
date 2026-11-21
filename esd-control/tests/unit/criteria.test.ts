@@ -259,3 +259,31 @@ describe("validación del esquema de reglas", () => {
     expect(a).toEqual(b);
   });
 });
+
+describe("correcciones tras revisión", () => {
+  const pts = [
+    { code: "A", name: "A", required: true },
+    { code: "B", name: "B", required: false },
+  ];
+  it("un punto optativo con valor no válido impide el conforme", () => {
+    const r: CriterionRules = { kind: "multipoint", point: range, aggregation: { mode: "worst_case" } };
+    const e = evaluate(r, { kind: "multipoint", points: { A: { value: "2e6" }, B: { value: "abc" } } }, { expectedPoints: pts });
+    expect(e.result).toBe("incomplete");
+    expect(e.reasons.join(" ")).toMatch(/B \(optativo con valor no válido\)/);
+    // optativo vacío sigue sin contar
+    expect(evaluate(r, { kind: "multipoint", points: { A: { value: "2e6" } } }, { expectedPoints: pts }).result).toBe("pass");
+  });
+  it("rechaza identificadores repetidos en reglas", () => {
+    expect(criterionRulesSchema.safeParse({ kind: "checklist", items: [{ code: "X", label: "a", required: true, allowNA: false }, { code: "X", label: "b", required: true, allowNA: false }] }).success).toBe(false);
+    expect(criterionRulesSchema.safeParse({ kind: "select", options: [{ value: "ok", label: "a", outcome: "pass" }, { value: "ok", label: "b", outcome: "fail" }] }).success).toBe(false);
+  });
+  it("la media convierte las unidades de los puntos a la unidad general", () => {
+    const r = { kind: "multipoint", point: { kind: "numeric", unit: "V", max: { value: "100", inclusive: true } }, aggregation: { mode: "mean", requireEachPoint: false, justification: "Procedimiento X §1" } } as CriterionRules;
+    const mv = { kind: "numeric", unit: "mV", max: { value: "100000", inclusive: true } } as NumericRule;
+    const p2 = [{ code: "P1", name: "1", required: true, rule: mv }, { code: "P2", name: "2", required: true }];
+    // 50 000 mV (=50 V) y 70 V → media 60 V ≤ 100 V
+    const e = evaluate(r, { kind: "multipoint", points: { P1: { value: "50000" }, P2: { value: "70" } } }, { expectedPoints: p2 });
+    expect(e.result).toBe("pass");
+    expect(e.reasons.join(" ")).toMatch(/Media de 2 punto\(s\) = 60 V/);
+  });
+});

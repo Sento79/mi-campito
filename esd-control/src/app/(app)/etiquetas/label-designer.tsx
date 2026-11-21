@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Printer, FileCode2, Save, Search, X, Plus } from "lucide-react";
 import { Alert, Badge, Button, Card, CardHeader, Checkbox, Field, Input, Select } from "@/components/ui/core";
 import { useAction, useToast } from "@/components/ui/client";
-import { LABEL_SIZES, labelLines, sheetGrid, type LabelData, type LabelLayout } from "@/lib/domain/labels";
+import { LABEL_SIZES, labelLayoutSchema, labelLines, sheetGrid, type LabelData, type LabelLayout } from "@/lib/domain/labels";
 import { saveLabelTemplateAction, searchAssetsForLabelsAction } from "./actions";
 
 type Tpl = { id: string; name: string; widthMm: number; heightMm: number; layout: LabelLayout; isDefault: boolean };
@@ -19,7 +19,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
   const [name, setName] = React.useState(def?.name ?? "Nueva plantilla");
   const [w, setW] = React.useState(def?.widthMm ?? 50);
   const [h, setH] = React.useState(def?.heightMm ?? 30);
-  const [l, setL] = React.useState<LabelLayout>(def?.layout ?? ({} as LabelLayout));
+  const [l, setL] = React.useState<LabelLayout>(def?.layout ?? labelLayoutSchema.parse({}));
   const [assets, setAssets] = React.useState<A[]>(initialAssets);
   const [q, setQ] = React.useState({ q: "", categoryId: "", locationId: "" });
   const [results, setResults] = React.useState<A[]>([]);
@@ -64,7 +64,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
         <Card>
           <CardHeader title="Plantilla" />
           <div className="space-y-3 p-4">
-            <Select aria-label="Plantilla" value={tplId} onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) pick(t); else { setTplId(""); setName("Nueva plantilla"); } }}>
+            <Select aria-label="Plantilla" value={tplId} disabled={save.pending} onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) pick(t); else { setTplId(""); setName("Nueva plantilla"); } }}>
               {templates.map((t) => <option key={t.id} value={t.id}>{t.name}{t.isDefault ? " (por defecto)" : ""}</option>)}
               <option value="">+ Nueva plantilla</option>
             </Select>
@@ -105,7 +105,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
               <Field label="Zebra: resolución" htmlFor="lt-dpi"><Select id="lt-dpi" value={l.thermal.dpi} onChange={(e) => set("thermal", { ...l.thermal, dpi: Number(e.target.value) as 203 | 300 | 600 })}><option value={203}>203 dpi</option><option value={300}>300 dpi</option><option value={600}>600 dpi</option></Select></Field>
               <Field label="Zebra: densidad (0–30)" htmlFor="lt-dk"><Input id="lt-dk" type="number" min={0} max={30} value={l.thermal.darkness} onChange={(e) => set("thermal", { ...l.thermal, darkness: Math.min(30, Math.max(0, Number(e.target.value) || 0)) })} /></Field>
             </div>
-            {canSave ? <Button variant="outline" icon={Save} loading={save.pending} className="w-full" onClick={async () => { const r = await save.run({ id: tplId || null, name, widthMm: w, heightMm: h, layout: l, isDefault: false }, { success: "Plantilla guardada" }); if (r?.ok) { setTplId(r.data.id); router.refresh(); } }}>Guardar plantilla</Button> : null}
+            {canSave ? <Button variant="outline" icon={Save} loading={save.pending} className="w-full" onClick={async () => { const r = await save.run({ id: tplId || null, name, widthMm: w, heightMm: h, layout: l, isDefault: templates.find((t) => t.id === tplId)?.isDefault ?? false }, { success: "Plantilla guardada" }); if (r?.ok) { setTplId(r.data.id); router.refresh(); } }}>Guardar plantilla</Button> : null}
           </div>
         </Card>
       </div>
@@ -139,7 +139,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
               <Select aria-label="Categoría" className="w-44" value={q.categoryId} onChange={(e) => setQ({ ...q, categoryId: e.target.value })}><option value="">Todas las categorías</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
               <Select aria-label="Ubicación" className="w-44" value={q.locationId} onChange={(e) => setQ({ ...q, locationId: e.target.value })}><option value="">Todas las ubicaciones</option>{locations.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select>
               <Button variant="outline" icon={Search} loading={search.pending} onClick={async () => { const r = await search.run({ q: q.q, categoryId: q.categoryId || null, locationId: q.locationId || null }); if (r?.ok) setResults(r.data); }}>Buscar</Button>
-              {results.length ? <Button variant="ghost" icon={Plus} onClick={() => { setAssets((x) => [...x, ...results.filter((r) => !x.some((y) => y.id === r.id))]); setResults([]); }}>Añadir {results.length}</Button> : null}
+              {results.length ? <Button variant="ghost" icon={Plus} onClick={() => { setAssets((x) => { const merged = [...x, ...results.filter((r) => !x.some((y) => y.id === r.id))]; if (merged.length > 2000) toast({ tone: "warn", title: "Máximo 2000 etiquetas por lote", body: "Se han añadido las primeras." }); return merged.slice(0, 2000); }); setResults([]); }}>Añadir {results.length}</Button> : null}
             </div>
             {results.length ? <Alert tone="info">{results.length} resultado(s): {results.slice(0, 8).map((r) => r.code).join(", ")}{results.length > 8 ? "…" : ""}</Alert> : null}
             <div className="flex flex-wrap gap-1.5">

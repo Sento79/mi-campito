@@ -37,6 +37,9 @@ export const STATUS_TONE: Record<AssetStatus, "ok" | "bad" | "warn" | "neutral">
 
 export function AssetTable({ rows, canEdit, canMeasure, locations, leadDays }: { rows: Row[]; canEdit: boolean; canMeasure: boolean; locations: { id: string; label: string }[]; leadDays: number }) {
   const [sel, setSel] = React.useState<Set<string>>(new Set());
+  // Las acciones masivas solo afectan a lo que el usuario ve: al filtrar o paginar se vacía la selección
+  const rowsKey = rows.map((r) => r.id).join(",");
+  React.useEffect(() => setSel(new Set()), [rowsKey]);
   const [archiveOpen, setArchiveOpen] = React.useState(false);
   const [moveOpen, setMoveOpen] = React.useState(false);
   const [target, setTarget] = React.useState("");

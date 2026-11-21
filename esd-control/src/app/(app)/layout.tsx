@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         unread: n,
       }}
     >
-      <ServiceWorkerRegister />
+      <ServiceWorkerRegister orgId={s.orgId} userId={s.userId} />
       {children}
     </AppShell>
   );

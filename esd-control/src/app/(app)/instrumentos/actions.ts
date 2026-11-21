@@ -27,7 +27,7 @@ const instrumentSchema = z.object({
 export const saveInstrumentAction = defineAction({ permission: "instruments.manage", schema: instrumentSchema }, async (i, { tx, session }) => {
   const row = { code: i.code, type: i.type, manufacturer: i.manufacturer, model: i.model, serial_number: i.serialNumber, acquired_on: i.acquiredOn, status: i.status, owner_user_id: i.ownerUserId, location_id: i.locationId, notes: i.notes };
   if (!i.id) {
-    const [x] = await tx`insert into instruments ${tx({ ...row, org_id: session.orgId })} returning id`;
+    const [x] = await tx`insert into instruments ${tx({ ...row, org_id: session.orgId, archived_at: i.status === "retired" ? new Date() : null })} returning id`;
     await audit(tx, session, { action: "create", entityType: "instrument", entityId: x.id, summary: `Instrumento ${i.code} dado de alta`, after: row });
     revalidatePath("/instrumentos");
     return { id: x.id as string };
@@ -37,7 +37,7 @@ export const saveInstrumentAction = defineAction({ permission: "instruments.mana
   const d = diff(before, row);
   if (d) {
     if ("status" in d.after && ["out_of_service", "retired"].includes(i.status) && !i.reason) throw new AppError("Indique el motivo del cambio de estado", 422, { reason: "Obligatorio" });
-    await tx`update instruments set ${tx({ ...row, archived_at: i.status === "retired" ? new Date() : null })} where id = ${i.id}`;
+    await tx`update instruments set ${tx({ ...row, archived_at: i.status === "retired" ? (before.archived_at ?? new Date()) : null })} where id = ${i.id}`;
     await audit(tx, session, { action: "update", entityType: "instrument", entityId: i.id, summary: `Instrumento ${i.code} modificado`, before: d.before, after: d.after, reason: i.reason });
   }
   revalidatePath(`/instrumentos/${i.id}`);
@@ -52,7 +52,7 @@ export const addCalibrationAction = defineAction({ permission: "instruments.mana
     outcome: z.enum(["pass", "fail", "adjusted"]), notes: z.string().max(2000).nullable(),
   }).refine((x) => x.dueOn > x.calibratedOn, { message: "La fecha de vencimiento debe ser posterior", path: ["dueOn"] })
     .parse({ instrumentId: g("instrumentId"), calibratedOn: g("calibratedOn"), dueOn: g("dueOn"), provider: g("provider"), certificateNumber: g("certificateNumber"), outcome: g("outcome") ?? "pass", notes: g("notes") });
-  const [inst] = await tx`select code from instruments where id = ${v.instrumentId}`;
+  const [inst] = await tx`select code from instruments where id = ${v.instrumentId} for update`;
   if (!inst) throw new AppError("Instrumento no encontrado", 404);
   const [cal] = await tx`insert into calibrations(org_id, instrument_id, calibrated_on, due_on, provider, certificate_number, outcome, notes, created_by)
     values (${session.orgId}, ${v.instrumentId}, ${v.calibratedOn}, ${v.dueOn}, ${v.provider}, ${v.certificateNumber}, ${v.outcome}, ${v.notes}, ${session.userId}) returning id`;

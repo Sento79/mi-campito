@@ -74,10 +74,14 @@ function toRow(i: AssetInput) {
 }
 
 async function assertUnique(tx: Tx, code: string, scan: string, exceptId?: string) {
-  const [dup] = await tx`select code, scan_code from assets where (upper(code) = upper(${code}) or scan_code = ${scan}) ${exceptId ? tx`and id <> ${exceptId}` : tx``} limit 1`;
+  // Espacio de nombres único: ni el ID ni el código de escaneo pueden coincidir con el ID o
+  // el código de escaneo de OTRO activo (la búsqueda por escaneo acepta ambos).
+  const [dup] = await tx`select code, scan_code from assets
+    where (upper(code) = upper(${code}) or upper(code) = upper(${scan}) or scan_code = ${scan} or upper(scan_code) = upper(${code}))
+    ${exceptId ? tx`and id <> ${exceptId}` : tx``} limit 1`;
   if (dup) {
-    const field = dup.code.toUpperCase() === code.toUpperCase() ? "code" : "scanCode";
-    throw new AppError("Identificador duplicado", 409, { [field]: field === "code" ? `El ID ${code} ya existe` : `El código de escaneo ${scan} ya está asignado a ${dup.code}` });
+    const codeClash = dup.code.toUpperCase() === code.toUpperCase() || dup.scan_code.toUpperCase() === code.toUpperCase();
+    throw new AppError("Identificador duplicado", 409, codeClash ? { code: dup.code.toUpperCase() === code.toUpperCase() ? `El ID ${code} ya existe` : `El ID ${code} coincide con el código de escaneo del activo ${dup.code}` } : { scanCode: `El código de escaneo ${scan} ya lo usa el activo ${dup.code}` });
   }
 }
 
@@ -133,13 +137,21 @@ export async function previewImport(tx: Tx, rows: string[][]): Promise<ImportPre
   const [cats, locs, codes] = await Promise.all([
     tx`select upper(code) as code from categories where is_active`,
     tx`select upper(code) as code from locations where is_active`,
-    tx`select upper(code) as code, scan_code from assets`,
+    tx`select upper(code) as code, upper(scan_code) as scan_code from assets`,
   ]);
+  const uniq = (rows: readonly { code?: unknown }[]) => {
+    const seen = new Map<string, number>();
+    for (const r of rows) seen.set(String(r.code), (seen.get(String(r.code)) ?? 0) + 1);
+    return { ok: new Set([...seen].filter(([, n]) => n === 1).map(([k]) => k)), ambiguous: new Set([...seen].filter(([, n]) => n > 1).map(([k]) => k)) };
+  };
+  const c = uniq(cats);
+  const l = uniq(locs);
   return validateImport(rows, {
-    categoryCodes: new Set(cats.map((c) => c.code)),
-    locationCodes: new Set(locs.map((c) => c.code)),
-    existingCodes: new Set(codes.map((c) => c.code)),
-    existingScanCodes: new Set(codes.map((c) => c.scan_code)),
+    categoryCodes: c.ok,
+    locationCodes: l.ok,
+    ambiguousCodes: new Set([...c.ambiguous, ...l.ambiguous]),
+    existingCodes: new Set(codes.flatMap((x) => [x.code, x.scan_code])),
+    existingScanCodes: new Set(codes.flatMap((x) => [x.code, x.scan_code])),
   });
 }
 
@@ -152,8 +164,9 @@ export async function commitImport(tx: Tx, ctx: Ctx, rows: string[][], fileName:
   if (preview.issues.length) throw new AppError(`El archivo tiene ${preview.issues.length} error(es). Corríjalos antes de importar.`, 422);
   if (preview.valid.length === 0) throw new AppError("No hay filas válidas que importar", 422);
   if (preview.valid.length > 5000) throw new AppError("Máximo 5000 filas por importación", 422);
-  const cats = new Map((await tx`select id, upper(code) as code from categories`).map((c) => [c.code as string, c.id as string]));
-  const locs = new Map((await tx`select id, upper(code) as code from locations`).map((c) => [c.code as string, c.id as string]));
+  // Solo registros activos; la previsualización ya rechazó códigos ambiguos (que difieren solo en mayúsculas)
+  const cats = new Map((await tx`select id, upper(code) as code from categories where is_active`).map((c) => [c.code as string, c.id as string]));
+  const locs = new Map((await tx`select id, upper(code) as code from locations where is_active`).map((c) => [c.code as string, c.id as string]));
   for (const r of preview.valid) {
     await tx`insert into assets ${tx({
       org_id: ctx.orgId,

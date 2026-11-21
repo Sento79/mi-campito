@@ -90,7 +90,8 @@ export function fitToContainer(img: Size, container: Size, rotation: Viewport["r
 
 /** Zoom manteniendo fijo el punto de pantalla `anchor`. */
 export function zoomAt(vp: Viewport, factor: number, anchor: Point, min = 0.02, max = 40): Viewport {
-  const scale = Math.min(max, Math.max(min, vp.scale * factor));
+  const lower = Math.min(min, vp.scale); // un encaje inicial puede quedar por debajo del mínimo
+  const scale = Math.min(max, Math.max(lower, vp.scale * factor));
   const k = scale / vp.scale;
   return { ...vp, scale, offsetX: anchor.x - (anchor.x - vp.offsetX) * k, offsetY: anchor.y - (anchor.y - vp.offsetY) * k };
 }

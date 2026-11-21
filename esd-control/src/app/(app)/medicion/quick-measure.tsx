@@ -22,12 +22,14 @@ interface Saved { result: Result; reasons: string[]; ncCode: string | null; ncId
 
 const INSTR_KEY = "esd-last-instrument";
 
-export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { orgId: string; settings: OrgSettings; instruments: Instrument[]; canCreateNc: boolean }) {
+export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc }: { orgId: string; userId: string; settings: OrgSettings; instruments: Instrument[]; canCreateNc: boolean }) {
   const toast = useToast();
   const router = useRouter();
   const sp = useSearchParams();
   const scanRef = React.useRef<HTMLInputElement>(null);
-  const [cfg, setCfg] = useScannerConfig({ ...settings.scanner, idleTimeoutMs: 80 } as ScannerConfig);
+  const scannerDefaults = React.useMemo(() => ({ ...settings.scanner, idleTimeoutMs: 80 }) as ScannerConfig, [settings.scanner]);
+  const [cfg, setCfg] = useScannerConfig(scannerDefaults);
+  const lookupSeq = React.useRef(0);
   const [target, setTarget] = React.useState<TargetDTO | null>(null);
   const [fromCache, setFromCache] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -90,7 +92,8 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
       resetForm();
       const fromRoute = routeCampaign && dto.campaigns.some((c) => c.id === routeCampaign) ? routeCampaign : null;
       setCampaignId(fromRoute ?? (dto.campaigns.length === 1 ? dto.campaigns[0].id : ""));
-      if (!dto.instrumentRequired) setNotRequired(false);
+      // La exención de instrumento no se arrastra entre elementos
+      setNotRequired(false);
       try {
         const d = localStorage.getItem(`esd-draft:${dto.pointId ?? dto.assetId}`);
         if (d) {
@@ -114,10 +117,14 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
 
   const lookup = React.useCallback(
     async (q: { scan?: string; assetId?: string; pointId?: string }) => {
+      // Solo se aplica la respuesta de la última búsqueda (las anteriores pueden llegar tarde)
+      const seq = ++lookupSeq.current;
+      const current = () => seq === lookupSeq.current;
       setLoading(true);
       setLookupError(null);
       try {
         const r = await lookupTargetAction(q);
+        if (!current()) return;
         if (r.ok) applyTarget(r.data);
         else {
           setLookupError(r.error);
@@ -126,9 +133,11 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
           scanRef.current?.focus();
         }
       } catch {
+        if (!current()) return;
         // Sin conexión: intentar la caché local
         const key = q.scan ?? q.assetId ?? q.pointId ?? "";
         const c = await getCachedTarget(orgId, key);
+        if (!current()) return;
         if (c) {
           applyTarget(c.data as TargetDTO, true);
           toast({ tone: "warn", title: "Sin conexión: datos de la última consulta", body: `Guardados el ${fmtDateTime(c.cachedAt)}. El resultado se confirmará al sincronizar.` });
@@ -137,7 +146,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
           toast({ tone: "bad", title: "Sin conexión", body: "Este elemento no se ha consultado antes en este dispositivo." });
         }
       } finally {
-        setLoading(false);
+        if (current()) setLoading(false);
       }
     },
     [applyTarget, orgId, toast],
@@ -203,7 +212,15 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
     }
   }, [target, rules, input, mode, reason, notRequired, selectedInstrument, settings.instrumentPolicy]);
   const pointResults = React.useMemo(() => Object.fromEntries((preview?.values ?? []).filter((v) => v.pointCode).map((v) => [v.pointCode!, v.result])), [preview]);
-  const hasAnyValue = mode !== "measure" || (preview?.values ?? []).some((v) => v.rawInput || v.optionValue || v.checked !== null && v.checked !== undefined);
+  // Datos introducidos: se mira el formulario, no el resultado de la evaluación
+  // (sin criterio vigente la evaluación no devuelve valores, pero hay que poder guardar «Requiere revisión»)
+  const hasAnyValue =
+    mode !== "measure" ||
+    !!form.numeric.value.trim() ||
+    !!form.option ||
+    Object.values(form.checklist).some(Boolean) ||
+    Object.values(form.points).some((p) => !!p.value?.trim()) ||
+    Object.values(form.parts).some((p) => !!p.value?.trim() || !!p.option || Object.values(p.checklist ?? {}).some(Boolean));
 
   const save = React.useCallback(async () => {
     if (!target || savingRef.current) return;
@@ -266,7 +283,12 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
       try {
         res = await fetch("/api/measurements", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       } catch {
-        await enqueue({ clientId, orgId, payload, label, provisionalResult: preview?.result ?? null });
+        if (photo) {
+          // La foto no se guarda en la cola local: no se pierde la medición ni se finge un envío completo
+          toast({ tone: "bad", title: "Sin conexión", body: "Las mediciones con foto necesitan conexión. Quite la foto para guardar en el dispositivo o reintente con red." });
+          return;
+        }
+        await enqueue({ clientId, orgId, userId, payload, label, provisionalResult: preview?.result ?? null });
         setSaved({ result: (preview?.result ?? "pending") as Result, reasons: preview?.reasons ?? [], ncCode: null, ncId: null, id: null, offline: true, label, warnings: [] });
         toast({ tone: "warn", title: "Guardada en este dispositivo", body: "Sin conexión. Se enviará automáticamente al recuperar la red. NO está registrada todavía en el servidor." });
         if (draftKey) localStorage.removeItem(draftKey);
@@ -304,7 +326,7 @@ export function QuickMeasure({ orgId, settings, instruments, canCreateNc }: { or
       savingRef.current = false;
       setSaving(false);
     }
-  }, [target, mode, reason, hasAnyValue, preview, comment, photo, settings.requireSignature, signature, repeat, campaignId, notRequired, instrumentId, input, canCreateNc, createNc, orgId, toast, draftKey, router, routeCampaign, routeInfo, loadNext, resetForm]);
+  }, [target, mode, reason, hasAnyValue, preview, comment, photo, settings.requireSignature, signature, repeat, campaignId, notRequired, instrumentId, input, canCreateNc, createNc, orgId, userId, toast, draftKey, router, routeCampaign, routeInfo, loadNext, resetForm]);
 
   // Atajos: F2 enfocar escáner, Ctrl+Enter guardar, 1-9 opciones de selección
   React.useEffect(() => {

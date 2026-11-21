@@ -28,7 +28,10 @@ export function api(opts: { permission?: Permission; mutating?: boolean }, handl
       if (opts.permission && !s.permissions.has(opts.permission)) {
         return NextResponse.json({ error: `Se requiere el permiso «${opts.permission}»` }, { status: 403 });
       }
-      return await handler(req, s, (await ctx.params) ?? {});
+      const res = await handler(req, s, (await ctx.params) ?? {});
+      // Respuestas de una sesión concreta: el navegador no debe reutilizarlas tras cambiar de usuario u organización
+      if (!res.headers.has("cache-control") || /private, max-age/.test(res.headers.get("cache-control") ?? "")) res.headers.set("cache-control", "no-store");
+      return res;
     } catch (e) {
       const u = toUserMessage(e);
       if (u.status >= 500) logger.error("api.failed", e, { path: new URL(req.url).pathname });
