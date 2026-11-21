@@ -1,0 +1,10 @@
+{
+  "name": "ESD Control",
+  "short_name": "ESD",
+  "description": "Control de mediciones ESD",
+  "start_url": "/medicion",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#0f1a2b",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

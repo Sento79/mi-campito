@@ -57,7 +57,7 @@ export async function loadTarget(tx: Tx, ref: { assetId?: string | null; planPoi
   let point: Record<string, any> | null = null;
   let assetId = ref.assetId ?? null;
   if (ref.planPointId) {
-    [point] = await tx`select pp.*, fp.title as plan_title from plan_points pp join floor_plans fp on fp.id = pp.plan_id where pp.id = ${ref.planPointId}`;
+    point = (await tx`select pp.*, fp.title as plan_title from plan_points pp join floor_plans fp on fp.id = pp.plan_id where pp.id = ${ref.planPointId}`)[0] ?? null;
     if (!point) throw new NotFoundError("Punto de plano no encontrado");
     if (point.archived_at) throw new AppError("El punto está archivado y no admite mediciones");
     if (point.point_type === "reference") throw new AppError("Los puntos de referencia no se miden");
@@ -65,9 +65,9 @@ export async function loadTarget(tx: Tx, ref: { assetId?: string | null; planPoi
   }
   let asset: Record<string, any> | null = null;
   if (assetId) {
-    [asset] = await tx`
-      select a.*, l.name as location_name, l.code as location_code
-        from assets a left join locations l on l.id = a.location_id where a.id = ${assetId}`;
+    asset = (await tx`
+      select a.*, l.name as location_name, l.code as location_code, app_location_path(a.location_id) as location_path
+        from assets a left join locations l on l.id = a.location_id where a.id = ${assetId}`)[0] ?? null;
     if (!asset) throw new NotFoundError("Activo no encontrado");
   }
   if (!asset && !point) throw new AppError("Indique un activo o un punto de plano");
@@ -176,7 +176,7 @@ export async function recordMeasurement(tx: Tx, ctx: Ctx, settings: OrgSettings,
   const today = new Date().toISOString().slice(0, 10);
   let instrument: Record<string, any> | null = null;
   if (input.instrumentId) {
-    [instrument] = await tx`select id, code, type, status, last_calibrated_on, calibration_due_on, archived_at from instruments where id = ${input.instrumentId}`;
+    instrument = (await tx`select id, code, type, status, last_calibrated_on, calibration_due_on, archived_at from instruments where id = ${input.instrumentId}`)[0] ?? null;
     if (!instrument) throw new NotFoundError("Instrumento no encontrado");
     if (instrument.archived_at || instrument.status === "retired") throw new AppError("El instrumento está retirado");
     if (target.instrumentTypes.length && !target.instrumentTypes.includes(instrument.type)) {

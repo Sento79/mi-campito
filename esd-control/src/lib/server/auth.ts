@@ -162,6 +162,6 @@ export function can(s: SessionInfo | null, p: Permission): boolean {
 /** Para páginas: redirige si no hay sesión y lanza 403 si falta el permiso. */
 export async function requirePermission(p: Permission): Promise<SessionInfo> {
   const s = await requireSession();
-  if (!s.permissions.has(p)) throw new ForbiddenError(`Se requiere el permiso «${p}»`);
+  if (!s.permissions.has(p)) redirect(`/sin-permiso?p=${encodeURIComponent(p)}`);
   return s;
 }
