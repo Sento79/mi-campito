@@ -111,7 +111,9 @@ export async function syncOutbox(opts: { includeErrored?: boolean } = {}): Promi
       if (res.ok) {
         await d.delete("outbox", it.clientId);
         sent++;
-      } else if (res.status === 401) {
+      } else if (res.status === 401 || res.status === 409) {
+        // 409: la sesión ya no es la del técnico que la guardó (p. ej. cambio en otra pestaña).
+        // Se detiene el envío y la medición sigue pendiente para cuando vuelva su titular.
         return { sent, failed, offline: false };
       } else if (res.status >= 500) {
         await d.put("outbox", { ...it, attempts: it.attempts + 1, lastError: "Error del servidor; se reintentará" });

@@ -211,9 +211,9 @@ describe("correcciones tras revisión (escáner, ZPL, fechas)", () => {
     expect(z).toContain("_7EJA");
     expect(z).toMatch(/\^FH\^FD_7EJA_5F1/);
   });
-  it("Code 128 ZPL: '>' se imprime literal (><)", () => {
+  it("Code 128 ZPL: '>' se imprime literal (>0; >< sería '^')", () => {
     const z = toZpl({ code: "X", name: "X", scanCode: "A>B", url: "https://e/a/X", category: null, location: null }, 100, 50, labelLayoutSchema.parse({ code: "barcode" }));
-    expect(z).toContain("^FDA><B^FS");
+    expect(z).toContain("^FDA>0B^FS");
   });
   it("importación: un ID no puede coincidir con el código de escaneo de una fila anterior", () => {
     const p = validateImport(

@@ -110,6 +110,9 @@ export async function updateAsset(tx: Tx, ctx: Ctx, id: string, i: AssetInput) {
   if (statusChange && ["blocked", "retired"].includes(String(row.status)) && !i.reason) {
     throw new AppError("Indique el motivo del cambio de estado", 422, { reason: "Obligatorio al bloquear o retirar" });
   }
+  // Orden de bloqueo categoría → activo, el mismo que al cambiar la periodicidad de una categoría
+  // (evita interbloqueos). Se bloquean la categoría anterior y la nueva, en orden de id.
+  await tx`select 1 from categories where id = any(${[before.category_id, row.category_id].filter(Boolean)}::uuid[]) order by id for share`;
   const upd = await tx`update assets set ${tx(row)} where id = ${id} returning id`;
   if (!upd.length) throw new AppError("No tiene permiso para editar este activo", 403);
   await audit(tx, ctx, { action: "update", entityType: "asset", entityId: id, summary: `Edición de activo ${row.code}`, before: d.before, after: d.after, reason: i.reason });

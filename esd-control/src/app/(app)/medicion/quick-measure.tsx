@@ -552,7 +552,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
               {settings.requireSignature ? <Checkbox label="Confirmo que he realizado la medición según el procedimiento indicado" checked={signature} onChange={(e) => setSignature(e.target.checked)} /> : null}
 
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
-                <Button variant="ghost" icon={RotateCcw} onClick={() => { resetForm(); if (draftKey) localStorage.removeItem(draftKey); }}>Limpiar</Button>
+                <Button variant="ghost" icon={RotateCcw} onClick={() => { resetForm(); pendingSend.current = null; if (draftKey) localStorage.removeItem(draftKey); }}>Limpiar</Button>
                 <Button size="lg" icon={Save} loading={saving} onClick={save} disabled={disabled} className="min-w-48">Guardar medición</Button>
               </div>
             </fieldset>

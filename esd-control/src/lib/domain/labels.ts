@@ -125,7 +125,7 @@ export function toZpl(d: LabelData, widthMm: number, heightMm: number, l: LabelL
     const modules = 11 * d.scanCode.length + 35;
     const by = Math.min(3, Math.floor(avail / modules));
     if (by >= 1) {
-      parts.push(`^FO${l.code === "both" ? textX : m},${H - m - bh}^BY${by}^BCN,${bh},N,N,N^FH^FD${zplText(d.scanCode).replace(/>/g, "><")}^FS`);
+      parts.push(`^FO${l.code === "both" ? textX : m},${H - m - bh}^BY${by}^BCN,${bh},N,N,N^FH^FD${zplText(d.scanCode).replace(/>/g, ">0")}^FS`);
     } else {
       // No cabe un código legible: se indica en lugar de imprimir barras ilegibles
       parts.push(`^FO${m},${H - m - fontH}^A0N,${fontH},${fontH}^FH^FD${zplText("Código demasiado largo para el ancho")}^FS`);

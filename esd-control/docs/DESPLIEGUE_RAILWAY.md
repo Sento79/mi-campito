@@ -85,7 +85,7 @@ Notas:
   apuntando al dominio anterior. Fije el dominio definitivo antes de imprimir etiquetas.
 
 Al guardar las variables, Railway despliega. En **Deployments → View logs** debe ver
-`Aplicada 0001_core.sql` … `7 migración(es) aplicada(s)` y, después, `Ready`.
+`Aplicada 0001_core.sql` … `8 migración(es) aplicada(s)` y, después, `Ready`.
 
 ## Paso 5 · Primer administrador (una sola vez)
 

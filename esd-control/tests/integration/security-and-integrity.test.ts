@@ -321,6 +321,18 @@ d("Endurecimiento tras revisión (0006)", () => {
     }
   });
 
+  it("una función nueva del propietario no es ejecutable por PUBLIC ni por la app", async () => {
+    const r = await o.begin(async (tx) => {
+      await tx`create function tmp_priv_check() returns int language sql as 'select 1'`;
+      const [x] = await tx`select has_function_privilege('esd_app', 'tmp_priv_check()', 'execute') as app,
+        exists (select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a where p.proname = 'tmp_priv_check' and a.grantee = 0) as pub`;
+      await tx`drop function tmp_priv_check()`;
+      return x;
+    });
+    expect(r.app).toBe(false);
+    expect(r.pub).toBe(false);
+  });
+
   it("la app no puede leer password_hash ni ejecutar funciones internas", async () => {
     await expect(as(a, A.admin, (tx) => tx`select password_hash from users`)).rejects.toThrow(/permission denied/);
     const ok = await as(a, A.admin, (tx) => tx`select id, email from users where id = ${A.admin.userId}`);
