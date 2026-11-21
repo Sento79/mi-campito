@@ -157,7 +157,7 @@ export function MultipointInput({ rule, points, value, onChange, results }: { ru
             <select aria-label={`Unidad punto ${p.code}`} value={v.unit || units[0]} onChange={(e) => onChange({ ...value, [p.code]: { ...v, unit: e.target.value } })} className="h-11 w-20 rounded-md border border-line-strong bg-surface px-1">
               {units.map((u) => <option key={u}>{u}</option>)}
             </select>
-            <span className={cn("w-28 text-right text-xs font-medium", res === "pass" ? "text-ok" : res === "fail" ? "text-bad" : "text-muted")}>{res ? RESULT_LABEL[res as keyof typeof RESULT_LABEL] : ""}</span>
+            <span className={cn("w-28 text-right text-xs font-medium", res === "pass" ? "text-ok" : res === "fail" ? "text-bad" : "text-muted")}>{res && v.value.trim() ? RESULT_LABEL[res as keyof typeof RESULT_LABEL] : ""}</span>
           </div>
         );
       })}

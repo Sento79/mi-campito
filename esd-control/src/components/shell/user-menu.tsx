@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Moon, Sun, Building2, UserRound, Check } from "lucide-react";
 import type { ShellUser } from "./app-shell";
 import { logoutAction, switchOrgAction } from "./shell-actions";
+import { clearOfflineCache } from "@/lib/client/outbox";
 
 export function UserMenu({ user }: { user: ShellUser }) {
   const [open, setOpen] = React.useState(false);
@@ -75,6 +76,7 @@ export function UserMenu({ user }: { user: ShellUser }) {
                   className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm hover:bg-surface-2"
                   onClick={async () => {
                     if (o.org_id === user.orgId) return;
+                    await clearOfflineCache();
                     await switchOrgAction(o.org_id);
                     setOpen(false);
                     router.push("/");
@@ -98,7 +100,7 @@ export function UserMenu({ user }: { user: ShellUser }) {
             {dark ? <Sun className="size-4 text-muted" aria-hidden /> : <Moon className="size-4 text-muted" aria-hidden />}
             {dark ? "Modo claro" : "Modo oscuro"}
           </button>
-          <form action={logoutAction}>
+          <form action={async () => { await clearOfflineCache(); await logoutAction(); }}>
             <button role="menuitem" type="submit" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-bad hover:bg-bad-soft">
               <LogOut className="size-4" aria-hidden /> Cerrar sesión
             </button>
