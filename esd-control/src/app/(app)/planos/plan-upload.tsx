@@ -116,7 +116,7 @@ export function PlanUploadForm({ mode, planId, locations, users }: { mode: "crea
       <Card className="p-5">
         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-line-strong px-6 py-10 text-center hover:bg-surface-2">
           {file ? <FileText className="size-8 text-primary" aria-hidden /> : <Upload className="size-8 text-muted" aria-hidden />}
-          <span className="text-sm font-medium">{file ? file.name : "Seleccione el plano (PDF, PNG o JPG, máx. 20 MB)"}</span>
+          <span className="max-w-full break-words text-sm font-medium">{file ? file.name : "Seleccione el plano (PDF, PNG o JPG, máx. 20 MB)"}</span>
           {file ? <span className="text-xs text-muted">{(file.size / 1048576).toFixed(1)} MB</span> : <span className="text-xs text-muted">Los PDF se convierten a imagen en su navegador; se conserva también el original.</span>}
           <input type="file" accept="application/pdf,image/png,image/jpeg" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} aria-label="Archivo del plano" />
         </label>

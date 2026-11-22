@@ -426,8 +426,8 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
               {target.status === "retired" ? <div className="mt-2"><Badge tone="neutral">Retirado: no admite mediciones</Badge></div> : null}
             </div>
             <dl className="space-y-3 p-4 text-sm">
-              <div className="flex gap-2"><MapPin className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div><dt className="sr-only">Ubicación</dt><dd>{target.location ?? "Sin ubicación"}{target.planTitle ? ` · Plano: ${target.planTitle}` : ""}</dd></div></div>
-              <div className="flex gap-2"><ClipboardList className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div><dt className="sr-only">Categoría</dt><dd>{target.categoryName ?? "—"} · {target.periodText}</dd></div></div>
+              <div className="flex gap-2"><MapPin className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div className="min-w-0 flex-1"><dt className="sr-only">Ubicación</dt><dd>{target.location ?? "Sin ubicación"}{target.planTitle ? ` · Plano: ${target.planTitle}` : ""}</dd></div></div>
+              <div className="flex gap-2"><ClipboardList className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div className="min-w-0 flex-1"><dt className="sr-only">Categoría</dt><dd>{target.categoryName ?? "—"} · {target.periodText}</dd></div></div>
               <div className="rounded-md bg-surface-2 p-3">
                 <dt className="text-xs font-semibold text-muted">Criterio de aceptación</dt>
                 {target.criterion ? (
@@ -440,9 +440,9 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
                   <dd className="mt-1 text-warn">Sin criterio vigente: el resultado quedará «Requiere revisión».</dd>
                 )}
               </div>
-              {target.instructions ? <div className="flex gap-2"><Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden /><div><dt className="text-xs font-semibold text-muted">Instrucciones</dt><dd>{target.instructions}</dd></div></div> : null}
-              {target.precautions ? <div className="flex gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" aria-hidden /><div><dt className="text-xs font-semibold text-muted">Precauciones</dt><dd>{target.precautions}</dd></div></div> : null}
-              <div className="flex gap-2"><Gauge className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div><dt className="text-xs font-semibold text-muted">Instrumento</dt><dd>{target.instrumentRequired ? `Requerido${target.instrumentTypes.length ? `: ${target.instrumentTypes.join(", ")}` : ""}` : "No requerido por el procedimiento"}</dd></div></div>
+              {target.instructions ? <div className="flex gap-2"><Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden /><div className="min-w-0 flex-1"><dt className="text-xs font-semibold text-muted">Instrucciones</dt><dd className="break-words whitespace-pre-line">{target.instructions}</dd></div></div> : null}
+              {target.precautions ? <div className="flex gap-2"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-warn" aria-hidden /><div className="min-w-0 flex-1"><dt className="text-xs font-semibold text-muted">Precauciones</dt><dd className="break-words whitespace-pre-line">{target.precautions}</dd></div></div> : null}
+              <div className="flex gap-2"><Gauge className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div className="min-w-0 flex-1"><dt className="text-xs font-semibold text-muted">Instrumento</dt><dd>{target.instrumentRequired ? `Requerido${target.instrumentTypes.length ? `: ${target.instrumentTypes.join(", ")}` : ""}` : "No requerido por el procedimiento"}</dd></div></div>
               <div className="flex gap-2"><History className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden /><div className="min-w-0 flex-1"><dt className="text-xs font-semibold text-muted">Últimas mediciones</dt>
                 <dd>
                   {target.lastMeasurements.length === 0 ? <span className="text-muted">Ninguna</span> : (

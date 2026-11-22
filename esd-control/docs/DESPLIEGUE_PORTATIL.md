@@ -61,11 +61,12 @@ Ajuste las líneas del apartado 4 de abajo (`DATABASE_URL`, `MIGRATION_DATABASE_
 npm run db:migrate
 npm run db:bootstrap
 npm run build
-npm start
+npm run start:local
 ```
 
-Si Windows pregunta por el cortafuegos para Node.js, puede **denegarlo**: Funnel se conecta por
-`localhost`. En el navegador del portátil, `http://localhost:3000/api/health` debe responder
+`start:local` escucha solo en este equipo (`127.0.0.1`): ni otros equipos de su red local ni nadie
+más puede entrar directamente al puerto 3000; solo a través de Tailscale. Si Windows pregunta por el
+cortafuegos para Node.js, **deniéguelo**. En el navegador del portátil, `http://127.0.0.1:3000/api/health` debe responder
 `{"ok":true}`. Después borre `BOOTSTRAP_ADMIN_PASSWORD` de `.env`.
 
 **6. Publicar** (en otra ventana de PowerShell; si responde *access denied*, ábrala como
@@ -83,7 +84,7 @@ el comando. Al final indica la dirección `https://<equipo>.<red>.ts.net`: ábra
 ```powershell
 $dir = (Get-Location).Path
 New-Item -ItemType Directory -Force "$dir\logs" | Out-Null
-$accion = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$dir`" && npm start >> logs\servidor.log 2>&1"
+$accion = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$dir`" && npm run start:local >> logs\servidor.log 2>&1"
 $inicio = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 Register-ScheduledTask -TaskName "ESD Control" -Action $accion -Trigger $inicio -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1))
 
@@ -156,11 +157,11 @@ imprimir.
 npm run db:migrate            # crea las tablas y el rol esd_app
 npm run db:bootstrap          # primer administrador: defina antes las variables BOOTSTRAP_* en .env
 npm run build
-npm start                     # escucha en el puerto 3000
+npm run start:local           # puerto 3000, solo en este equipo (127.0.0.1)
 ```
 
 Tras `db:bootstrap`, borre `BOOTSTRAP_ADMIN_PASSWORD` de `.env`. Compruebe en el propio portátil
-`http://localhost:3000/api/health` → `{"ok":true}`.
+`http://127.0.0.1:3000/api/health` → `{"ok":true}`.
 
 ## 6 · Publicar con Tailscale Funnel
 
@@ -181,13 +182,14 @@ esté en marcha.
 
 ## 7 · Que siga funcionando
 
-- `npm start` debe estar en marcha. Para que arranque solo y se reinicie si falla, use un gestor de
-  procesos: `npm install -g pm2`, después `pm2 start npm --name esd-control -- start` y
+- `npm run start:local` debe estar en marcha (escucha solo en `127.0.0.1`: Tailscale es la única
+  entrada; no use `npm start`, que escucha en todas las interfaces de red). Para que arranque solo y se reinicie si falla, use un gestor de
+  procesos: `npm install -g pm2`, después `pm2 start npm --name esd-control -- run start:local` y
   `pm2 save`; en Linux y macOS, `pm2 startup` indica cómo arrancarlo con el equipo.
 - Desactive la suspensión del portátil mientras deba estar accesible.
 - La alerta diaria de vencimientos: programe `npm run jobs:alerts` una vez al día (cron en
   Linux/macOS, Programador de tareas en Windows).
-- Copias de seguridad de la base de datos y de `storage/`: ver `docs/OPERACION.md`.
+- Copias de seguridad: ver el apartado siguiente.
 
 ## Actualizar a una versión nueva
 
@@ -196,5 +198,38 @@ git pull
 npm ci
 npm run db:migrate
 npm run build
-pm2 restart esd-control       # o pare y vuelva a lanzar npm start
+pm2 restart esd-control       # o pare y vuelva a lanzar npm run start:local
 ```
+
+## Copias de seguridad
+
+Copie la base de datos y la carpeta `storage/` (planos, fotos, documentos) **a la vez**, con la
+aplicación parada, y guarde las dos juntas fuera del portátil (disco externo o nube). Los comandos
+leen la conexión de `.env`, así que funcionan en una terminal nueva. Ejecútelos en `esd-control`.
+
+**Windows (PowerShell):**
+
+```powershell
+Stop-ScheduledTask "ESD Control"     # o cierre la ventana de npm run start:local
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object CommandLine -like "*next*start*" | ForEach-Object { Stop-Process -Id $_.ProcessId }
+$url = (Select-String -Path .env -Pattern '^MIGRATION_DATABASE_URL=(.+)$').Matches[0].Groups[1].Value
+$fecha = Get-Date -Format "yyyyMMdd-HHmm"
+New-Item -ItemType Directory -Force copias | Out-Null
+& "C:\Program Files\PostgreSQL\16\bin\pg_dump.exe" --format=custom --file "copias\esd-$fecha.dump" $url
+Compress-Archive -Path storage -DestinationPath "copias\storage-$fecha.zip"
+Start-ScheduledTask "ESD Control"
+```
+
+**Linux y macOS:**
+
+```bash
+pm2 stop esd-control
+url="$(grep '^MIGRATION_DATABASE_URL=' .env | cut -d= -f2-)"
+fecha="$(date +%Y%m%d-%H%M)"; mkdir -p copias
+pg_dump --format=custom --file "copias/esd-$fecha.dump" "$url"
+tar czf "copias/storage-$fecha.tar.gz" storage
+pm2 start esd-control
+```
+
+Para restaurar, con la aplicación parada: `pg_restore --clean --if-exists --dbname "<MIGRATION_DATABASE_URL>" copias/esd-<fecha>.dump`
+y sustituya `storage/` por la del mismo par.
