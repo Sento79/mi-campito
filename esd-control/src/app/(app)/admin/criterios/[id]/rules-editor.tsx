@@ -23,8 +23,8 @@ function NumericEditor({ r, onChange }: { r: NumericRule; onChange: (r: NumericR
       <Checkbox label={label} checked={!!r[k]} onChange={(e) => onChange({ ...r, [k]: e.target.checked ? { value: "", inclusive: true } : undefined })} />
       {r[k] ? (
         <div className="mt-2 flex items-center gap-2">
-          <Input aria-label={`${label}: valor`} className="font-mono" placeholder="p. ej. 1e6" value={r[k]!.value} onChange={(e) => onChange({ ...r, [k]: { ...r[k]!, value: e.target.value } })} />
-          <Select aria-label={`${label}: tipo`} className="w-40" value={r[k]!.inclusive ? "inc" : "exc"} onChange={(e) => onChange({ ...r, [k]: { ...r[k]!, inclusive: e.target.value === "inc" } })}>
+          <Input aria-label={`${label}: valor`} className="min-w-0 font-mono" placeholder="p. ej. 1e6" value={r[k]!.value} onChange={(e) => onChange({ ...r, [k]: { ...r[k]!, value: e.target.value } })} />
+          <Select aria-label={`${label}: tipo`} className="w-40 shrink-0" value={r[k]!.inclusive ? "inc" : "exc"} onChange={(e) => onChange({ ...r, [k]: { ...r[k]!, inclusive: e.target.value === "inc" } })}>
             <option value="inc">{k === "min" ? "≥ (inclusivo)" : "≤ (inclusivo)"}</option>
             <option value="exc">{k === "min" ? "> (exclusivo)" : "< (exclusivo)"}</option>
           </Select>

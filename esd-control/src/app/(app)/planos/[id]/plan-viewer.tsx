@@ -302,7 +302,7 @@ export function PlanViewer({
             <span className="w-12 text-center text-xs tabular text-muted" aria-live="polite">{vp ? `${Math.round(vp.scale * 100)}%` : ""}</span>
           </div>
           <span className="h-6 w-px bg-line" aria-hidden />
-          <div className="flex items-center gap-1" role="radiogroup" aria-label="Modo">
+          <div className="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="Modo">
             {([["view", "Ver", MousePointer2, true], ["add", "Añadir", Plus, canCreate && editable], ["move", "Mover", Move, canEdit && editable], ["route", "Ruta", Route, canEdit && editable]] as const).map(([k, l, I, allowed]) =>
               allowed ? (
                 <button key={k} role="radio" aria-checked={mode === k} onClick={() => { setMode(k); if (k === "route") setRoute(routeOrdered.map((p) => p.id)); }} className={cn("flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm", mode === k ? "bg-primary text-primary-fg" : "text-muted hover:bg-surface-2")}>

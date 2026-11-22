@@ -129,7 +129,7 @@ export function LabelDesigner({ templates, initialAssets, sample, categories, lo
               </div>
             </div>
           </div>
-          <p className="px-5 py-2 text-xs text-muted">QR: <span className="font-mono">{data.url}</span> — no contiene datos del activo; abre la ficha tras iniciar sesión.</p>
+          <p className="px-5 py-2 text-xs text-muted">QR: <span className="font-mono break-words">{data.url}</span> — no contiene datos del activo; abre la ficha tras iniciar sesión.</p>
         </Card>
         <Card>
           <CardHeader title={`Activos a imprimir (${assets.length})`} actions={<><Button variant="outline" icon={FileCode2} loading={busy === "zpl"} onClick={() => generate("zpl")}>ZPL</Button><Button icon={Printer} loading={busy === "pdf"} onClick={() => generate("pdf")}>Generar PDF</Button></>} />
