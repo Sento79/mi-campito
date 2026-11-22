@@ -8,6 +8,102 @@ Funnel la hace **pública en internet** (no solo dentro de su red Tailscale): us
 fuertes y no cargue datos de demostración. Si solo la van a usar dispositivos de su red Tailscale,
 use `tailscale serve` en lugar de `tailscale funnel` (Paso 6).
 
+## Windows paso a paso (PowerShell)
+
+Abra **PowerShell** (no hace falta como administrador salvo donde se indica). Sustituya las
+contraseñas: solo letras, dígitos y `. _ ~ -`.
+
+**1. Programas**
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+winget install Tailscale.Tailscale
+```
+
+PostgreSQL: descargue el instalador de Windows desde postgresql.org (versión 16 o superior) y
+ejecútelo. Anote la contraseña que elija para el usuario `postgres`; deje el puerto 5432. Cierre y
+vuelva a abrir PowerShell para que reconozca los programas nuevos. Inicie sesión en Tailscale
+desde su icono junto al reloj.
+
+**2. Código**
+
+```powershell
+cd $HOME
+git clone https://github.com/Sento79/mi-campito.git
+cd mi-campito\esd-control
+npm ci
+```
+
+**3. Base de datos** (pide la contraseña del usuario `postgres`):
+
+```powershell
+& "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -h localhost -c "create role esd_owner login createrole password 'CONTRASEÑA_PROPIETARIO'" -c "create database esd owner esd_owner"
+```
+
+(Si instaló otra versión, cambie `16` en la ruta.)
+
+**4. Variables**
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Ajuste las líneas del apartado 4 de abajo (`DATABASE_URL`, `MIGRATION_DATABASE_URL`,
+`APP_DB_PASSWORD`, `APP_URL`, `COOKIE_SECURE=true`, `DEMO_SEED_ENABLED=false`) y rellene las
+`BOOTSTRAP_*` del primer administrador. Su dirección `*.ts.net` aparece en `tailscale status`
+(columna del nombre del equipo) o en el panel de Tailscale, en *Machines*.
+
+**5. Preparar y probar**
+
+```powershell
+npm run db:migrate
+npm run db:bootstrap
+npm run build
+npm start
+```
+
+Si Windows pregunta por el cortafuegos para Node.js, puede **denegarlo**: Funnel se conecta por
+`localhost`. En el navegador del portátil, `http://localhost:3000/api/health` debe responder
+`{"ok":true}`. Después borre `BOOTSTRAP_ADMIN_PASSWORD` de `.env`.
+
+**6. Publicar** (en otra ventana de PowerShell; si responde *access denied*, ábrala como
+administrador):
+
+```powershell
+tailscale funnel --bg 3000
+```
+
+La primera vez muestra un enlace para activar HTTPS y Funnel en su red: ábralo, actívelo y repita
+el comando. Al final indica la dirección `https://<equipo>.<red>.ts.net`: ábrala en el móvil.
+
+**7. Que arranque sola al encender** (PowerShell como administrador, desde `esd-control`):
+
+```powershell
+$dir = (Get-Location).Path
+New-Item -ItemType Directory -Force "$dir\logs" | Out-Null
+$accion = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$dir`" && npm start >> logs\servidor.log 2>&1"
+$inicio = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+Register-ScheduledTask -TaskName "ESD Control" -Action $accion -Trigger $inicio -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1))
+
+$alertas = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c cd /d `"$dir`" && npm run jobs:alerts >> logs\alertas.log 2>&1"
+Register-ScheduledTask -TaskName "ESD Control alertas" -Action $alertas -Trigger (New-ScheduledTaskTrigger -Daily -At 6:17am)
+
+powercfg /change standby-timeout-ac 0
+```
+
+La aplicación arranca al iniciar sesión en Windows; Funnel (con `--bg`) se mantiene mientras
+Tailscale esté en marcha. `powercfg` evita la suspensión con el cargador conectado; revise también
+en *Opciones de energía* qué hace el equipo al **cerrar la tapa** (elija «No hacer nada» si lo
+quiere cerrado y encendido).
+
+**Actualizar a una versión nueva:** detenga la tarea (`Stop-ScheduledTask "ESD Control"`), y en
+`esd-control`: `git pull`, `npm ci`, `npm run db:migrate`, `npm run build`, y
+`Start-ScheduledTask "ESD Control"`.
+
+Los apartados siguientes explican lo mismo de forma general (también para Linux y macOS).
+
 ## 1 · Requisitos
 
 | Programa | Comprobación | Instalación |
