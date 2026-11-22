@@ -150,6 +150,8 @@ Por defecto los tests usan `esd_owner` / `esd_owner_dev` y `esd_app` / `esd_app_
 
 Cualquier plataforma Node.js con disco persistente (VM, contenedor, PaaS con volumen) y un PostgreSQL gestionado.
 
+**Ordenador propio con Tailscale Funnel** (dirección HTTPS fija `*.ts.net`): [`docs/DESPLIEGUE_PORTATIL.md`](docs/DESPLIEGUE_PORTATIL.md).
+
 **Railway:** guía paso a paso en [`docs/DESPLIEGUE_RAILWAY.md`](docs/DESPLIEGUE_RAILWAY.md). Incluye `Dockerfile`, `railway.json` (migración previa al despliegue y comprobación de salud en `/api/health`) y `railway.cron.json` (alertas diarias).
 
 Pasos genéricos:
