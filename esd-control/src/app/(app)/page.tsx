@@ -78,7 +78,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </div>
         </Widget>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[1.4fr_1fr]">
           <Widget id="trend">
             <Card>
               <CardHeader title="Tendencia de mediciones" description="Mediciones válidas por semana en el periodo filtrado" />
@@ -93,7 +93,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Widget>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Widget id="upcoming">
             <Card>
               <CardHeader title="Próximas tareas" description="Mediciones, calibraciones, NC y campañas próximas o vencidas" actions={<Link href="/alertas" className="text-xs font-medium text-primary hover:underline">Ver alertas</Link>} />

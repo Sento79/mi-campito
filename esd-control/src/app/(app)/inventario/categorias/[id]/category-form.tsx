@@ -36,7 +36,7 @@ export function CategoryForm({ id, defaults, procedures, criteria, readOnly }: {
     >
       <fieldset disabled={readOnly} className="space-y-4">
         <Card className="p-5">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Field label="Código" htmlFor="code" required error={e.code?.message}><Input id="code" className="font-mono uppercase" {...register("code", { required: "Obligatorio" })} /></Field>
             <Field label="Nombre" htmlFor="name" required error={e.name?.message}><Input id="name" {...register("name", { required: "Obligatorio" })} /></Field>
             <Field label="Tipo de inspección" htmlFor="inspectionType"><Input id="inspectionType" placeholder="p. ej. Resistencia a tierra" {...register("inspectionType")} /></Field>
@@ -69,7 +69,7 @@ export function CategoryForm({ id, defaults, procedures, criteria, readOnly }: {
         </Card>
         <Card className="p-5">
           <h2 className="mb-3 text-sm font-semibold">Requisitos de registro</h2>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Checkbox label="Instrumento obligatorio" {...register("instrumentRequired")} />
               <Field label="Tipos de instrumento admitidos" htmlFor="instrumentTypes" hint="Separados por comas; deben coincidir con el tipo del instrumento. Vacío = cualquiera">
@@ -82,7 +82,7 @@ export function CategoryForm({ id, defaults, procedures, criteria, readOnly }: {
               <Checkbox label="Foto adjunta" value="photo" {...register("requiredFields")} />
             </fieldset>
           </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field label="Instrucciones para el técnico" htmlFor="instructions"><Textarea id="instructions" rows={3} {...register("instructions")} /></Field>
             <Field label="Precauciones" htmlFor="precautions"><Textarea id="precautions" rows={3} {...register("precautions")} /></Field>
           </div>

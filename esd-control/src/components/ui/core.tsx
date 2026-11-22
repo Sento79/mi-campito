@@ -256,7 +256,7 @@ export function ResultBadge({ result, size = "sm" }: { result: string | null | u
 // ---------------------------------------------------------------------------
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("relative overflow-x-auto", className)}>
       <table className="w-full border-collapse text-sm">{children}</table>
     </div>
   );

@@ -409,7 +409,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
       ) : null}
 
       {target ? (
-        <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
           {/* Ficha */}
           <Card className="h-fit">
             <div className="border-b border-line p-4">
@@ -477,7 +477,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
 
               {mode === "measure" ? (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label htmlFor="instrument" className="mb-1.5 block text-sm font-medium">Instrumento{target.instrumentRequired ? <span className="text-bad"> *</span> : null}</label>
                       <Select id="instrument" value={instrumentId} disabled={notRequired} onChange={(e) => { setInstrumentId(e.target.value); try { localStorage.setItem(INSTR_KEY, e.target.value); } catch {} }}>
@@ -519,7 +519,7 @@ export function QuickMeasure({ orgId, userId, settings, instruments, canCreateNc
                 <ReasonPicker reasons={settings.notMeasurableReasons} reason={reason.r} detail={reason.d} onChange={(r, d) => setReason({ r, d })} />
               )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor="comment" className="mb-1.5 block text-sm font-medium">Comentario{target.requiredFields.includes("comment") ? <span className="text-bad"> *</span> : null}</label>
                   <Textarea id="comment" rows={2} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={2000} />

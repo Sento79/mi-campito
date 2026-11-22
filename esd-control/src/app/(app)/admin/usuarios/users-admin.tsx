@@ -49,7 +49,7 @@ export function UsersAdmin({ me, users, roles }: { me: string; users: U[]; roles
       </Card>
       <Card>
         <CardHeader title="Roles y permisos" actions={<Button size="sm" variant="outline" icon={ShieldPlus} onClick={() => setRole({ id: "", key: "", name: "", description: "", isSystem: false, permissions: ["read"], members: 0 })}>Nuevo rol</Button>} />
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr><th className="sticky left-0 bg-surface px-4 py-2 text-left text-xs font-semibold text-muted">Permiso</th>{roles.map((r) => <th key={r.id} className="px-3 py-2 text-center text-xs font-semibold"><button className="hover:text-primary hover:underline" onClick={() => setRole(r)} disabled={r.key === "admin"}>{r.name}</button><span className="block font-normal text-faint">{r.members} usuario(s)</span></th>)}</tr></thead>
             <tbody>
@@ -80,12 +80,12 @@ export function UsersAdmin({ me, users, roles }: { me: string; users: U[]; roles
       {role ? (
         <Modal open onClose={() => setRole(null)} title={role.id ? `Permisos de ${role.name}` : "Nuevo rol"} size="lg" footer={<><Button variant="ghost" onClick={() => setRole(null)}>Cancelar</Button><Button loading={saveRole.pending} onClick={async () => { const r = await saveRole.run({ id: role.id || null, key: role.key, name: role.name, description: role.description || null, permissions: role.permissions as never }, { success: "Rol guardado" }); if (r?.ok) { setRole(null); router.refresh(); } }}>Guardar</Button></>}>
           {!role.id || !role.isSystem ? (
-            <div className="mb-4 grid gap-4 sm:grid-cols-2">
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {!role.id ? <Field label="Clave" htmlFor="ro-key" hint="p. ej. supervisor_linea"><Input id="ro-key" className="font-mono" value={role.key} onChange={(e) => setRole({ ...role, key: e.target.value })} /></Field> : null}
               <Field label="Nombre" htmlFor="ro-name"><Input id="ro-name" value={role.name} onChange={(e) => setRole({ ...role, name: e.target.value })} /></Field>
             </div>
           ) : <p className="mb-3 text-sm text-muted">Rol del sistema: puede ajustar sus permisos.</p>}
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {PERMISSIONS.map((p) => <Checkbox key={p} label={PERMISSION_LABEL[p]} checked={role.permissions.includes(p)} onChange={(e) => setRole({ ...role, permissions: e.target.checked ? [...role.permissions, p] : role.permissions.filter((x) => x !== p) })} />)}
           </div>
         </Modal>

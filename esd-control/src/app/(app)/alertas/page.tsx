@@ -28,7 +28,7 @@ export default async function Alerts({ searchParams }: { searchParams: Promise<{
           <Link key={k} href={`/alertas?tipo=${k}`} className={`rounded-full border px-3 py-1 text-sm ${tipo === k ? "border-primary bg-primary-soft text-primary" : "border-line hover:bg-surface-2"}`}>{ALERT_LABEL[k]} ({counts[k] ?? 0})</Link>
         ))}
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         <Card className="min-w-0">
           <CardHeader title={tipo ? ALERT_LABEL[tipo as AlertKind] ?? "Alertas" : "Alertas activas"} />
           {list.length === 0 ? <EmptyState icon={BellRing} title="Sin alertas" description="No hay elementos que requieran atención." /> : (

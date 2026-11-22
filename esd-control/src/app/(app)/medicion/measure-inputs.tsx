@@ -83,7 +83,7 @@ export function NumericInput({ rule, value, unit, onChange, autoFocus, id, label
 export function SelectInput({ rule, value, onChange }: { rule: SelectRule; value: string; onChange: (v: string) => void }) {
   const tone = { pass: "border-ok bg-ok-soft text-ok", fail: "border-bad bg-bad-soft text-bad", review: "border-warn bg-warn-soft text-warn", not_applicable: "border-neutral bg-neutral-soft text-neutral" };
   return (
-    <div role="radiogroup" aria-label="Seleccione el estado observado" className="grid gap-2 sm:grid-cols-2">
+    <div role="radiogroup" aria-label="Seleccione el estado observado" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {rule.options.map((o, i) => (
         <button
           key={o.value}
@@ -190,7 +190,7 @@ export function CombinedInput({ rules, value, onChange }: { rules: Extract<Crite
 
 export function ReasonPicker({ reasons, reason, detail, onChange }: { reasons: string[]; reason: string; detail: string; onChange: (r: string, d: string) => void }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div>
         <label htmlFor="nm-reason" className="mb-1.5 block text-sm font-medium">Motivo <span className="text-bad">*</span></label>
         <Select id="nm-reason" value={reason} onChange={(e) => onChange(e.target.value, detail)}>

@@ -16,7 +16,7 @@ export function NcCreateForm({ users, severities, assets, measurement }: { users
   const sev = severities.find((s) => s.id === v.severityId);
   return (
     <Card className="space-y-4 p-5">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field label="Título" htmlFor="nc-title" required error={errs.title} className="md:col-span-2"><Input id="nc-title" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} /></Field>
         <Field label="Gravedad" htmlFor="nc-sev" hint={sev?.dueDays ? `Plazo por defecto: ${sev.dueDays} días` : undefined}><Select id="nc-sev" value={v.severityId} onChange={(e) => setV({ ...v, severityId: e.target.value })}><option value="">—</option>{severities.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</Select></Field>
         <Field label="Responsable" htmlFor="nc-owner"><Select id="nc-owner" value={v.ownerUserId} onChange={(e) => setV({ ...v, ownerUserId: e.target.value })}><option value="">—</option>{users.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</Select></Field>

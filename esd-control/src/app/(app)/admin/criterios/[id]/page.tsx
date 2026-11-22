@@ -26,7 +26,7 @@ export default async function CriterionPage({ params }: { params: Promise<{ id: 
   return (
     <>
       <PageHeader title={`${d.c.code} · ${d.c.name}`} description={d.c.description ?? undefined} meta={active ? <Badge tone="primary">Vigente v{active.version}</Badge> : <Badge tone="warn">Sin versión vigente</Badge>} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="min-w-0 space-y-4">
           {manage && d.c.is_active ? <RulesEditor criterionId={d.c.id} procedures={d.procedures} initial={active ? (active.rules as never) : null} /> : null}
           {d.auditRows.length ? <Card><CardHeader title="Historial de cambios" /><AuditTrail rows={d.auditRows as never} /></Card> : null}

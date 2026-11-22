@@ -45,7 +45,7 @@ export function NcEditor({ nc, readOnly, users, severities }: { nc: Record<strin
     <Card>
       <CardHeader title="Tratamiento" actions={!readOnly ? <Button size="sm" icon={Save} disabled={!dirty} loading={a.pending} onClick={async () => { const r = await a.run(v as never, { success: "Cambios guardados" }); if (r?.ok) router.refresh(); }}>Guardar</Button> : null} />
       <div className="space-y-4 p-5">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Field label="Título" htmlFor="nc-t" className="md:col-span-4"><Input id="nc-t" value={v.title} disabled={readOnly} onChange={(e) => setV({ ...v, title: e.target.value })} /></Field>
           <Field label="Gravedad" htmlFor="nc-s"><Select id="nc-s" value={v.severityId} disabled={readOnly} onChange={(e) => setV({ ...v, severityId: e.target.value })}><option value="">—</option>{severities.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select></Field>
           <Field label="Responsable" htmlFor="nc-o"><Select id="nc-o" value={v.ownerUserId} disabled={readOnly} onChange={(e) => setV({ ...v, ownerUserId: e.target.value })}><option value="">—</option>{users.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select></Field>
@@ -91,7 +91,7 @@ export function NcActions({ ncId, actions, users, canEdit }: { ncId: string; act
         </ul>
       )}
       <Modal open={open} onClose={() => setOpen(false)} title="Nueva acción" footer={<><Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button><Button loading={add.pending} onClick={async () => { const r = await add.run({ ncId, ...v }, { success: "Acción añadida" }); if (r?.ok) { setOpen(false); setV({ kind: "corrective", description: "", ownerUserId: "", dueOn: "" }); router.refresh(); } }}>Añadir</Button></>}>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="Tipo" htmlFor="ac-k"><Select id="ac-k" value={v.kind} onChange={(e) => setV({ ...v, kind: e.target.value })}>{Object.entries(KIND).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
           <Field label="Responsable" htmlFor="ac-o"><Select id="ac-o" value={v.ownerUserId} onChange={(e) => setV({ ...v, ownerUserId: e.target.value })}><option value="">—</option>{users.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</Select></Field>
           <Field label="Fecha límite" htmlFor="ac-d"><Input id="ac-d" type="date" value={v.dueOn} onChange={(e) => setV({ ...v, dueOn: e.target.value })} /></Field>

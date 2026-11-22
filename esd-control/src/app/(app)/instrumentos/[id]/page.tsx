@@ -30,7 +30,7 @@ export default async function InstrumentPage({ params }: { params: Promise<{ id:
   return (
     <>
       <PageHeader title={isNew ? "Nuevo instrumento" : `${i!.code} · ${i!.type}`} meta={i ? <><CalBadge due={i.calibration_due_on} last={i.last_calibrated_on} lead={s.org.settings.calibrationLeadDays} /><Badge>{d.usage.n} mediciones</Badge></> : undefined} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
           <InstrumentForm readOnly={!manage} users={d.users} locations={d.locations} v={i ? { id: i.id, code: i.code, type: i.type, manufacturer: i.manufacturer ?? "", model: i.model ?? "", serialNumber: i.serial_number ?? "", acquiredOn: i.acquired_on ?? "", status: i.status, ownerUserId: i.owner_user_id ?? "", locationId: i.location_id ?? "", notes: i.notes ?? "", reason: "" } : null} />
           {!isNew ? (

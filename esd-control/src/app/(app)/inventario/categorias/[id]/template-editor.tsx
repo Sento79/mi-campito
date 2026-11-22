@@ -25,7 +25,7 @@ export function TemplateEditor({ categoryId, template, criteria, readOnly }: { c
   return (
     <div className="space-y-3">
       <label className="block max-w-sm text-sm font-medium">Nombre de la plantilla<Input className="mt-1" value={name} disabled={readOnly} onChange={(e) => setName(e.target.value)} /></label>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="text-left text-xs text-muted"><th className="py-1 pr-2">Orden</th><th className="pr-2">Código</th><th className="pr-2">Nombre</th><th className="pr-2">Instrucciones</th><th className="pr-2">Criterio propio</th><th className="pr-2">Obligatorio</th><th /></tr></thead>
           <tbody>

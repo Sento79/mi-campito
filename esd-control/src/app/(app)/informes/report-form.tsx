@@ -21,7 +21,7 @@ export function ReportForm({ locations, categories, campaigns, canExport }: { lo
     <Card>
       <CardHeader title="Generar informe" />
       <div className="space-y-4 p-5">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Tipo de informe">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Tipo de informe">
           {TYPES.map((x) => (
             <label key={x.k} className={`cursor-pointer rounded-lg border p-3 text-sm ${v.type === x.k ? "border-primary bg-primary-soft" : "border-line hover:bg-surface-2"}`}>
               <input type="radio" className="sr-only" checked={v.type === x.k} onChange={() => setV({ ...v, type: x.k })} />
@@ -30,7 +30,7 @@ export function ReportForm({ locations, categories, campaigns, canExport }: { lo
             </label>
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Field label="Desde" htmlFor="r-from"><Input id="r-from" type="date" value={v.from} onChange={(e) => setV({ ...v, from: e.target.value })} /></Field>
           <Field label="Hasta" htmlFor="r-to"><Input id="r-to" type="date" value={v.to} onChange={(e) => setV({ ...v, to: e.target.value })} /></Field>
           <Field label="Planta / área / zona" htmlFor="r-loc"><Select id="r-loc" value={v.location} onChange={(e) => setV({ ...v, location: e.target.value })}><option value="">Todas</option>{locations.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</Select></Field>

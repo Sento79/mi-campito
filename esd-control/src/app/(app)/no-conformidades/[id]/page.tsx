@@ -40,7 +40,7 @@ export default async function NcPage({ params }: { params: Promise<{ id: string 
         actions={<NcWorkflow id={n.id} status={n.status} allowed={NC_TRANSITIONS[n.status as NcStatus]} canEdit={s.permissions.has("edit") || s.permissions.has("validate")} canValidate={s.permissions.has("validate")} />}
       />
       {n.status === "closed" ? <div className="mb-4"><Alert tone="ok" title={`Cerrada el ${fmtDateTime(n.closed_at)} · verificada por ${n.verified_by_name}`}>{n.verification_notes}</Alert></div> : null}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">
           <NcEditor nc={{ id: n.id, title: n.title, description: n.description ?? "", severityId: n.severity_id ?? "", ownerUserId: n.owner_user_id ?? "", dueOn: n.due_on ?? "", containment: n.containment ?? "", rootCause: n.root_cause ?? "", correctiveAction: n.corrective_action ?? "", preventiveAction: n.preventive_action ?? "" }} readOnly={!canEdit} users={d.users} severities={d.severities} />
           <NcActions ncId={n.id} actions={d.actions.map((a) => ({ id: a.id, kind: a.kind, description: a.description, owner: a.owner_name, dueOn: a.due_on, status: a.status }))} users={d.users} canEdit={canEdit} />

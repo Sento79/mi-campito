@@ -25,7 +25,7 @@ export default async function Plans() {
       {rows.length === 0 ? (
         <Card><EmptyState icon={Map} title="Aún no hay planos" description="Suba un plano en PDF, PNG o JPG para empezar a colocar puntos." action={s.permissions.has("create") ? <ButtonLink href="/planos/nuevo" icon={Plus}>Nuevo plano</ButtonLink> : undefined} /></Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {rows.map((p) => (
             <Link key={p.id} href={`/planos/${p.id}`} className="group overflow-hidden rounded-lg border border-line bg-surface shadow-card transition-colors hover:border-primary/50">
               <div className="aspect-[16/10] overflow-hidden border-b border-line bg-surface-2">

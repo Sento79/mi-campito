@@ -51,7 +51,7 @@ export default async function MeasurementDetail({ params }: { params: Promise<{ 
         }
       />
       {m.status === "invalidated" ? <div className="mb-4"><Alert tone="warn" title={`Invalidada el ${fmtDateTime(m.invalidated_at)} por ${m.invalidated_by_name}`}>Motivo: {m.invalidation_reason}. El registro original se conserva sin cambios.</Alert></div> : null}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Resultado y explicación" description="Evaluación reproducible con las reglas guardadas en el momento del registro" />

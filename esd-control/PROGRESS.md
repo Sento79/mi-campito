@@ -79,3 +79,9 @@ Chromium de Playwright 1.63. No se ha verificado contra Supabase ni otros servic
 - `npm start` escucha en `PORT` (Railway) y en todas las interfaces.
 - Guía: `docs/DESPLIEGUE_RAILWAY.md`.
 - Verificado en local con la imagen Docker contra una base vacía: migraciones, alta de administrador, arranque, `/api/health` 200, `/login` 200, tarea de alertas y migración repetida sin cambios. No se ha desplegado en Railway (requiere la cuenta del usuario).
+
+## Móvil: sin desbordamiento horizontal
+
+- Rejillas responsive con `grid-cols-1` en móvil (la columna implícita `auto` crecía con el contenido).
+- `fieldset { min-width: 0 }` (por defecto `min-content`) y contenedores de tablas `relative` (los textos `sr-only` escapaban del scroll).
+- Test E2E: ninguna página principal ni de detalle supera 360 px de ancho.
